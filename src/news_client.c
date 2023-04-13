@@ -1,21 +1,42 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#define BUFLEN 512 // Tamanho do buffer
 
 void print_menu();
 
+void erro(char *s)
+{
+    perror(s);
+    exit(1);
+}
+
 int main(int argc, char *argv[])
 {
+    struct sockaddr_in si_outra;
+
+    int s, recv_len;
+    socklen_t slen = sizeof(si_outra);
+    char buf[BUFLEN];
+
     char input[256];   // input of user
     char *cmd_args[5]; // pointer that stores command arguments
     char *token;
     int num_args; // number of arguments that the user input has
 
-    if (argc != 3)
+    if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {
-        printf("news_client {endereço do servidor} {PORTO_NOTICIAS}\n");
-        exit(1);
+        erro("Erro na criação do socket");
     }
+
+    // Preenchimento da socket address structure
+    si_minha.sin_family = AF_INET;
+    si_minha.sin_port = htons(PORT);
+    si_minha.sin_addr.s_addr = htonl(INADDR_ANY);
 
     print_menu();
 
