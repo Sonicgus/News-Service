@@ -86,10 +86,10 @@ int main(int argc, char *argv[])
 void print_menu()
 {
     // Menu
-    printf(" ADD_USER - {username} {password} - Adicionar utilizador\n");
+    printf("MENU\n");
+    printf(" ADD_USER - {username} {password} {administrador/cliente/jornalista} - Adicionar utilizador\n");
     printf(" DEL - {username} - Eliminar um utilizador\n");
     printf(" LIST - Lista utilizadores\n");
     printf(" QUIT - Sair da consola\n");
     printf(" QUIT_SERVER - Desligar servidor\n");
-    printf("Nota: O username só pode ser {administrador/cliente/jornalista}!\n");
 }
