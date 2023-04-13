@@ -64,14 +64,11 @@ int main(int argc, char *argv[])
 
 void print_menu()
 {
-    // print the menu
-    printf("\nMenu (comando - descricao)\n");
-    printf(" exit - Sair\n");
-    printf(" stats\n");
-    printf(" reset\n");
-    printf(" sensors\n");
-    printf(" add_alert [id] [chave] [min] [max]\n");
-    printf(" remove_alert [id]\n");
-    printf(" list_alerts\n");
-    printf("escolha o que deseja fazer:\n");
+    // Menu
+    printf(" ADD_USER - {username} {password} - Adicionar utilizador\n");
+    printf(" DEL - {username} - Eliminar um utilizador\n");
+    printf(" LIST - Lista utilizadores\n");
+    printf(" QUIT - Sair da consola\n");
+    printf(" QUIT_SERVER - Desligar servidor\n");
+    printf("Nota: O username só pode ser {administrador/cliente/jornalista}!\n");
 }
