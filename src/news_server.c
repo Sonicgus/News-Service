@@ -16,8 +16,10 @@ typedef struct user_node
 } UserNode;
 
 void read_config_file(const char *config_file);
-void add_user(const char *username, const char *password, const char *type);
-void del(const char *username);
+int add_user(const char *username, const char *password, const char *type);
+int del(const char *username);
+void save_users(const char *config_file);
+void udp(const char *porto_config);
 
 UserNode *root, **head = &root;
 
@@ -36,6 +38,15 @@ int main(int argc, char *argv[])
     }
     read_config_file(argv[3]);
 
+    udp(argv[2]);
+
+    save_users(argv[3]);
+
+    return 0;
+}
+
+void udp(const char *porto_config)
+{
     struct sockaddr_in si_minha, si_outra;
 
     int s, recv_len;
@@ -43,7 +54,6 @@ int main(int argc, char *argv[])
 
     char *cmd_args[5]; // pointer that stores command arguments
     char *token;
-    int num_args; // number of arguments that the user buf has
     char buf[BUFLEN];
 
     // Cria um socket para recepção de pacotes UDP
@@ -54,7 +64,7 @@ int main(int argc, char *argv[])
 
     // Preenchimento da socket address structure
     si_minha.sin_family = AF_INET;
-    si_minha.sin_port = htons(atoi(argv[2]));
+    si_minha.sin_port = htons(atoi(porto_config));
     si_minha.sin_addr.s_addr = htonl(INADDR_ANY);
 
     // Associa o socket à informação de endereço
@@ -62,23 +72,24 @@ int main(int argc, char *argv[])
     {
         erro("Erro no bind");
     }
-
-    ////////////////////
-    int notlogged = 1;
     int serverstate = 1;
-    while (serverstate)
-    {
+    int num_args; // number of arguments that the user buf has
+    UserNode *adminlogged = NULL;
 
-        while (notlogged)
+    while (serverstate && adminlogged == NULL)
+    {
+        num_args = 0;
+        while (num_args < 2)
         {
             num_args = 0;
+
             bzero(buf, BUFLEN); // limpar buffer
 
             if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *)&si_outra, (socklen_t *)&slen)) == -1)
             {
                 erro("Erro no recvfrom");
             }
-            // Para ignorar o restante conteúdo (anterior do buffer)
+
             buf[recv_len - 1] = '\0';
 
             // get each command parameter piece
@@ -86,30 +97,29 @@ int main(int argc, char *argv[])
             {
                 cmd_args[num_args++] = token;
             }
+        }
 
-            for (UserNode *atual = root; atual != NULL; atual = atual->next)
+        for (UserNode *atual = root; atual != NULL; atual = atual->next)
+        {
+            if (strcmp(atual->type, "administrator") && strcmp(atual->username, cmd_args[0]) == 0 && strcmp(atual->password, cmd_args[1]) == 0)
             {
-                if (strcmp(atual->username, cmd_args[0]) == 0)
+                adminlogged = atual;
+
+                if (sendto(s, "Sessão iniciada com sucesso\n", strlen("Sessão iniciada com sucesso\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
                 {
-                    if (strcmp(atual->password, cmd_args[1]) == 0)
-                    {
-                        if (sendto(s, "Sessão iniciada com sucesso", strlen("Sessão iniciada com sucesso"), 0, (struct sockaddr *)&si_outra, slen) == -1)
-                        {
-                            erro("Erro no envio da mensagem");
-                        }
-                        notlogged = 0;
-                        break;
-                    }
+                    erro("Erro no envio da mensagem");
                 }
-            }
-            if (sendto(s, "credenciais erradas", strlen("credenciais erradas"), 0, (struct sockaddr *)&si_outra, slen) == -1)
-            {
-                erro("Erro no envio da mensagem");
+
+                break;
             }
         }
 
-        /////////////////////
-        while (!notlogged)
+        if (adminlogged == NULL && sendto(s, "credenciais erradas\n", strlen("credenciais erradas\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+        {
+            erro("Erro no envio da mensagem");
+        }
+
+        while (adminlogged != NULL)
         {
             num_args = 0;
             bzero(buf, BUFLEN); // limpar buffer
@@ -122,7 +132,7 @@ int main(int argc, char *argv[])
             // Para ignorar o restante conteúdo (anterior do buffer)
             buf[recv_len - 1] = '\0';
 
-            printf("Mensagem recebida: %s", buf);
+            printf("\nComando recebido: %s\n", buf);
 
             // get each command parameter piece
             for (token = strtok(buf, " "); token != NULL && num_args < 5; token = strtok(NULL, " "))
@@ -130,41 +140,126 @@ int main(int argc, char *argv[])
                 cmd_args[num_args++] = token;
             }
 
+            if (num_args == 0)
+                continue;
+
             if (strcmp(cmd_args[0], "QUIT") == 0)
-                notlogged = 1;
+            {
+                adminlogged = NULL;
+
+                if (sendto(s, "Logout feito com sucesso\n", strlen("Logout feito com sucesso\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                {
+                    erro("Erro no envio da mensagem");
+                }
+            }
+
             else if (strcmp(cmd_args[0], "ADD_USER") == 0 && num_args == 4)
             {
-                add_user(cmd_args[1], cmd_args[2], cmd_args[3]);
+                if (add_user(cmd_args[1], cmd_args[2], cmd_args[3]))
+                {
+                    if (sendto(s, "Usuario inserido com sucesso\n", strlen("Usuario inserido com sucesso\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                    {
+                        erro("Erro no envio da mensagem");
+                    }
+                }
+                else
+                {
+                    if (sendto(s, "Erro: Usuario com esse username já existe\n", strlen("Erro: Usuario com esse username já existe\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                    {
+                        erro("Erro no envio da mensagem");
+                    }
+                }
             }
             else if (strcmp(cmd_args[0], "DEL") == 0 && num_args == 2)
             {
-                del(cmd_args[1]);
+                if (strcmp(cmd_args[1], adminlogged->username) == 0)
+                {
+                    if (sendto(s, "Não é possivel eleminar um usuario com uma conta logada\n", strlen("Não é possivel eleminar um usuario com uma conta logada\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                    {
+                        erro("Erro no envio da mensagem");
+                    }
+                }
+
+                else if (del(cmd_args[1]))
+                {
+                    if (sendto(s, "Usuario eliminado com sucesso\n", strlen("Usuario eliminado com sucesso\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                    {
+                        erro("Erro no envio da mensagem");
+                    }
+                }
+                else
+                {
+                    if (sendto(s, "Erro: Usuario nao existe\n", strlen("Erro: Usuario nao existe\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                    {
+                        erro("Erro no envio da mensagem");
+                    }
+                }
             }
 
             else if (strcmp(cmd_args[0], "LIST") == 0)
             {
                 for (UserNode *atual = root; atual != NULL; atual = atual->next)
                 {
+                    sprintf(buf, "%s;%s;%s\n", atual->username, atual->password, atual->type);
                     printf("%s;%s;%s\n", atual->username, atual->password, atual->type);
+
+                    if (sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                    {
+                        erro("Erro no envio da mensagem");
+                    }
                 }
             }
             else if (strcmp(cmd_args[0], "QUIT_SERVER") == 0)
             {
                 serverstate = 0;
-                break;
+                adminlogged = NULL;
             }
             else
             {
                 // wrong command
                 printf("Comando errado\n");
+                if (sendto(s, "Comando errado\n", strlen("Comando errado\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                {
+                    erro("Erro no envio da mensagem");
+                }
             }
         }
     }
+
     close(s);
-    return 0;
 }
 
-void del(const char *username)
+void save_users(const char *config_file)
+{
+    FILE *fp;
+
+    fp = fopen(config_file, "w");
+
+    if (fp == NULL)
+    {
+        printf("Erro ao abrir ficheiro de configurações.\n");
+        exit(1);
+    }
+
+    fclose(fp);
+
+    fp = fopen(config_file, "a");
+
+    if (fp == NULL)
+    {
+        printf("Erro ao abrir ficheiro de configurações.\n");
+        exit(1);
+    }
+
+    for (UserNode *atual = root; atual != NULL; atual = atual->next)
+    {
+        fprintf(fp, "%s;%s;%s\n", atual->username, atual->password, atual->type);
+    }
+
+    fclose(fp);
+}
+
+int del(const char *username)
 {
     for (UserNode *last = NULL, *atual = root; atual != NULL; last = atual, atual = atual->next)
     {
@@ -179,13 +274,23 @@ void del(const char *username)
                 root = atual->next;
             }
             free(atual);
-            return;
+            return 1;
         }
     }
+    return 0;
 }
 
-void add_user(const char *username, const char *password, const char *type)
+int add_user(const char *username, const char *password, const char *type)
 {
+
+    for (UserNode *last = NULL, *atual = root; atual != NULL; last = atual, atual = atual->next)
+    {
+        if (strcmp(atual->username, username) == 0)
+        {
+            return 0;
+        }
+    }
+
     UserNode *new_node = (UserNode *)malloc(sizeof(UserNode));
 
     strcpy(new_node->username, username);
@@ -195,6 +300,8 @@ void add_user(const char *username, const char *password, const char *type)
 
     *head = new_node;
     head = &new_node->next;
+
+    return 1;
 }
 
 void read_config_file(const char *config_file)
