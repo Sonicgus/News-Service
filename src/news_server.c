@@ -92,10 +92,19 @@ void udp(const char *porto_config)
 
             buf[recv_len - 1] = '\0';
 
+            printf("mensagem recebida:%s\n", buf);
+
             // get each command parameter piece
             for (token = strtok(buf, " "); token != NULL && num_args < 5; token = strtok(NULL, " "))
             {
                 cmd_args[num_args++] = token;
+            }
+            if (num_args == 1)
+            {
+                if (sendto(s, "Deve inserir:\nUsername Password\n", strlen("Deve inserir:\nUsername Password\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                {
+                    erro("Erro no envio da mensagem");
+                }
             }
         }
 
@@ -106,6 +115,10 @@ void udp(const char *porto_config)
                 adminlogged = atual;
 
                 if (sendto(s, "Sessão iniciada com sucesso\n", strlen("Sessão iniciada com sucesso\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                {
+                    erro("Erro no envio da mensagem");
+                }
+                if (sendto(s, "\n---Menu---\nADD_USER {username} {password} {administrador/cliente/jornalista}\nDEL {username}\nLIST\nQUIT\nQUIT_SERVER\n\n", strlen("\n---Menu---\nADD_USER {username} {password} {administrador/cliente/jornalista}\nDEL {username}\nLIST\nQUIT\nQUIT_SERVER\n\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
                 {
                     erro("Erro no envio da mensagem");
                 }
@@ -174,7 +187,7 @@ void udp(const char *porto_config)
             {
                 if (strcmp(cmd_args[1], adminlogged->username) == 0)
                 {
-                    if (sendto(s, "Não é possivel eleminar um usuario com uma conta logada\n", strlen("Não é possivel eleminar um usuario com uma conta logada\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
+                    if (sendto(s, "Não é possivel eliminar um usuario com uma conta logada\n", strlen("Não é possivel eliminar um usuario com uma conta logada\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
                     {
                         erro("Erro no envio da mensagem");
                     }
@@ -237,7 +250,7 @@ void save_users(const char *config_file)
 
     if (fp == NULL)
     {
-        printf("Erro ao abrir ficheiro de configurações.\n");
+        perror("Erro ao abrir ficheiro de configurações.\n");
         exit(1);
     }
 
@@ -247,7 +260,7 @@ void save_users(const char *config_file)
 
     if (fp == NULL)
     {
-        printf("Erro ao abrir ficheiro de configurações.\n");
+        perror("Erro ao abrir ficheiro de configurações.\n");
         exit(1);
     }
 
@@ -282,7 +295,6 @@ int del(const char *username)
 
 int add_user(const char *username, const char *password, const char *type)
 {
-
     for (UserNode *last = NULL, *atual = root; atual != NULL; last = atual, atual = atual->next)
     {
         if (strcmp(atual->username, username) == 0)
@@ -292,6 +304,12 @@ int add_user(const char *username, const char *password, const char *type)
     }
 
     UserNode *new_node = (UserNode *)malloc(sizeof(UserNode));
+
+    if (new_node == NULL)
+    {
+        perror("erro a alocar memória para um novo utilizador");
+        exit(1);
+    }
 
     strcpy(new_node->username, username);
     strcpy(new_node->password, password);
@@ -314,7 +332,7 @@ void read_config_file(const char *config_file)
 
     if (fp == NULL)
     {
-        printf("Erro ao abrir ficheiro de configurações.\n");
+        perror("Erro ao abrir ficheiro de configurações.\n");
         exit(1);
     }
 
@@ -323,21 +341,21 @@ void read_config_file(const char *config_file)
         username = strtok(line, ";");
         if (username == NULL)
         {
-            printf("Erro ao obter username");
+            perror("Erro ao obter username");
             exit(1);
         }
 
         password = strtok(NULL, ";");
         if (password == NULL)
         {
-            printf("Erro ao obter username");
+            perror("Erro ao obter password");
             exit(1);
         }
 
         type = strtok(NULL, "\n");
         if (type == NULL)
         {
-            printf("Erro ao obter username");
+            perror("Erro ao obter type");
             exit(1);
         }
 
