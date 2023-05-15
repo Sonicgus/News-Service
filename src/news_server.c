@@ -1,5 +1,10 @@
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <signal.h>
+
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -15,13 +20,19 @@ typedef struct user_node
     struct user_node *next;
 } UserNode;
 
+UserNode *root, **head = &root;
+pthread_t thread_id[2];
+pthread_mutex_t mutex_shm = PTHREAD_MUTEX_INITIALIZER;
+char *porto_config;
+
+void cleanup();
 void read_config_file(const char *config_file);
 int add_user(const char *username, const char *password, const char *type);
 int del(const char *username);
 void save_users(const char *config_file);
-void udp(const char *porto_config);
 
-UserNode *root, **head = &root;
+void *udp(void *arg);
+void *tcp(void *arg);
 
 void erro(char *s)
 {
@@ -37,15 +48,53 @@ int main(int argc, char *argv[])
         exit(1);
     }
     read_config_file(argv[3]);
+    porto_config = argv[2];
 
-    udp(argv[2]);
+    if (pthread_create(&thread_id[0], NULL, udp, NULL))
+    {
+        perror("Error: Creating udp thread");
+        cleanup();
+        exit(1);
+    }
+    if (pthread_create(&thread_id[1], NULL, tcp, NULL))
+    {
+        perror("Error: Creating tcp thread");
+        cleanup();
+        exit(1);
+    }
+
+    if (signal(SIGINT, cleanup) == SIG_ERR)
+    {
+        perror("Error: signal");
+        cleanup();
+        exit(1);
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        if (pthread_join(thread_id[i], NULL))
+        {
+            perror("Error: waiting for a thread to finish");
+            exit(1);
+        }
+    }
 
     save_users(argv[3]);
+
+    cleanup();
 
     return 0;
 }
 
-void udp(const char *porto_config)
+void cleanup()
+{
+    if (pthread_mutex_destroy(&mutex_shm))
+    {
+        perror("Error: destroy mutex");
+    }
+}
+
+void *udp(void *arg)
 {
     struct sockaddr_in si_minha, si_outra;
 
@@ -240,6 +289,12 @@ void udp(const char *porto_config)
     }
 
     close(s);
+    pthread_exit(NULL);
+}
+
+void *tcp(void *arg)
+{
+    pthread_exit(NULL);
 }
 
 void save_users(const char *config_file)
