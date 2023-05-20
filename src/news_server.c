@@ -29,19 +29,16 @@ char *porto_noticias;
 pthread_t thread_id[2];
 pthread_mutex_t mutex_shm = PTHREAD_MUTEX_INITIALIZER;
 
-void *udp(void *arg);
+void *handle_udp(void *arg);
+void *handle_tcp(void *p_client_socket);
+
+void tcp_server();
 
 void read_config_file(const char *config_file);
 int add_user(const char *username, const char *password, const char *type);
 int del(const char *username);
 
 void erro(char *s);
-
-void erro(char *s)
-{
-    perror(s);
-    exit(1);
-}
 
 int main(int argc, char *argv[])
 {
@@ -54,11 +51,13 @@ int main(int argc, char *argv[])
     porto_config = argv[2];
     read_config_file(argv[3]);
 
-    if (pthread_create(&thread_id[0], NULL, udp, NULL))
+    if (pthread_create(&thread_id[0], NULL, handle_udp, NULL))
         erro("Error: Creating udp thread");
 
     /* if (signal(SIGINT, cleanup) == SIG_ERR)
-         erro("Error: signal");*/
+     erro("Error: signal");*/
+
+    tcp_server();
 
     if (pthread_join(thread_id[0], NULL))
         erro("Error: waiting for a thread to finish");
@@ -66,7 +65,88 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void *udp(void *arg)
+void tcp_server()
+{
+    int fd, client;
+    struct sockaddr_in addr, client_addr;
+    int client_addr_size;
+
+    bzero((void *)&addr, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(atoi(porto_noticias));
+
+    if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        erro("na funcao socket");
+
+    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        erro("na funcao bind");
+
+    if (listen(fd, 5) < 0)
+        erro("na funcao listen");
+
+    client_addr_size = sizeof(client_addr);
+
+    while (serverstate)
+    {
+        client = accept(fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_size);
+
+        if (client > 0)
+        {
+            pthread_t t;
+
+            int *p_client_socket = malloc(sizeof(int));
+
+            *p_client_socket = client;
+
+            if (pthread_create(&t, NULL, handle_tcp, p_client_socket))
+                erro("Error: Creating tcp thread");
+        }
+    }
+    close(fd);
+}
+
+void *handle_tcp(void *p_client_socket)
+{
+    int client_socket = *((int *)(p_client_socket));
+    free(p_client_socket);
+
+    char buffer[BUFLEN];
+    char resposta[BUFLEN]; // variavel na qual é inserida a mensagem a enviar ao cliente
+    char ip[50];           // ip conrrespondente ao dominio
+
+    write(client_socket, "Bem-vindo ao servidor de nomes do DEI. Insere o username e password\n", sizeof("Bem-vindo ao servidor de nomes do DEI. Insere o username e password\n"));
+
+    while (serverstate)
+    {
+
+        // limpar variaveis buffer,resposta e ip
+        bzero(buffer, BUFLEN);
+        bzero(resposta, BUFLEN);
+
+        // obter a mensagem enviada do cliente
+        read(client_socket, buffer, BUFLEN - 1);
+
+        printf("Recebi de um cliente: %s\n", buffer);
+
+        // verificar se o cliente deseja terminar a sessão
+        if (strncmp(buffer, "SAIR", 4) == 0)
+        {
+            write(client_socket, "Até logo!\n", 10);
+            break;
+        }
+
+        sprintf(resposta, "recebi isso :)\n");
+
+        write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+    }
+
+    close(client_socket);
+
+    pthread_exit(NULL);
+}
+
+void *handle_udp(void *arg)
 {
     struct sockaddr_in si_minha, si_outra;
 
@@ -339,4 +419,10 @@ void read_config_file(const char *config_file)
         add_user(username, password, type);
     }
     fclose(fp);
+}
+
+void erro(char *s)
+{
+    perror(s);
+    exit(1);
 }
