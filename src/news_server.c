@@ -115,7 +115,7 @@ void *handle_tcp(void *p_client_socket)
     char resposta[BUFLEN]; // variavel na qual é inserida a mensagem a enviar ao cliente
     char ip[50];           // ip conrrespondente ao dominio
 
-    write(client_socket, "Bem-vindo ao servidor de nomes do DEI. Insere o username e password\n", sizeof("Bem-vindo ao servidor de nomes do DEI. Insere o username e password\n"));
+    write(client_socket, "Bem-vindo ao servidor. Insere o username e password\n", sizeof("Bem-vindo ao servidor. Insere o username e password\n"));
 
     while (serverstate)
     {
