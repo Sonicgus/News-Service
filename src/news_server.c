@@ -19,6 +19,14 @@ typedef struct user_node
     struct user_node *next;
 } UserNode;
 
+typedef struct topic_node
+{
+    int id;
+    char Topic[21];
+    char ip[40];
+    struct topic_node *next;
+} TopicNode;
+
 UserNode *root, **head = &root;
 
 int serverstate = 1;
@@ -115,7 +123,51 @@ void *handle_tcp(void *p_client_socket)
     char resposta[BUFLEN]; // variavel na qual é inserida a mensagem a enviar ao cliente
     char ip[50];           // ip conrrespondente ao dominio
 
+    char *cmd_args[5]; // pointer that stores command arguments
+    char *token;
+
+    UserNode *user = NULL;
+
     write(client_socket, "Bem-vindo ao servidor. Insere o username e password\n", sizeof("Bem-vindo ao servidor. Insere o username e password\n"));
+
+    int num_args;
+    while (user == NULL)
+    {
+        num_args = 0;
+
+        bzero(buffer, BUFLEN); // limpar buffer
+
+        int recv_len = read(client_socket, buffer, BUFLEN - 1);
+
+        buffer[recv_len - 1] = '\0';
+
+        printf("mensagem recebida:%s\n", buffer);
+
+        // get each command parameter piece
+        for (token = strtok(buffer, " "); token != NULL && num_args < 5; token = strtok(NULL, " "))
+        {
+            cmd_args[num_args++] = token;
+        }
+
+        if (num_args != 2)
+        {
+            write(client_socket, "Deve inserir:\nUsername Password\n", sizeof("Deve inserir:\nUsername Password\n"));
+        }
+        else
+        {
+            for (UserNode *atual = root; atual != NULL; atual = atual->next)
+            {
+                if ((strcmp(atual->type, "administrator") != 0) && (strcmp(atual->username, cmd_args[0]) == 0) && (strcmp(atual->password, cmd_args[1])) == 0)
+                {
+                    user = atual;
+
+                    write(client_socket, "Sessão iniciada\n", sizeof("Sessão iniciada\n"));
+
+                    break;
+                }
+            }
+        }
+    }
 
     while (serverstate)
     {
@@ -211,7 +263,7 @@ void *handle_udp(void *arg)
 
         for (UserNode *atual = root; atual != NULL; atual = atual->next)
         {
-            if (strcmp(atual->type, "administrator") && strcmp(atual->username, cmd_args[0]) == 0 && strcmp(atual->password, cmd_args[1]) == 0)
+            if (strcmp(atual->type, "administrator") == 0 && strcmp(atual->username, cmd_args[0]) == 0 && strcmp(atual->password, cmd_args[1]) == 0)
             {
                 adminlogged = atual;
 
@@ -395,29 +447,20 @@ void read_config_file(const char *config_file)
 {
     FILE *fp;
 
-    char line[100], *username, *password, *type;
+    char line[100];
 
     fp = fopen(config_file, "r");
 
     if (fp == NULL)
         erro("Erro ao abrir ficheiro de configurações.\n");
 
-    while (fgets(line, sizeof(line), fp))
+    char username[21], password[21], type[15];
+
+    while (fscanf(fp, "%20[^;];%20[^;];%14s", username, password, type) == 3)
     {
-        username = strtok(line, ";");
-        if (username == NULL)
-            erro("Erro ao obter username");
-
-        password = strtok(NULL, ";");
-        if (password == NULL)
-            erro("Erro ao obter password");
-
-        type = strtok(NULL, "\n");
-        if (type == NULL)
-            erro("Erro ao obter type");
-
         add_user(username, password, type);
     }
+
     fclose(fp);
 }
 
