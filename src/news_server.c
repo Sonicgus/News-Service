@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,18 +20,22 @@ typedef struct user_node
 } UserNode;
 
 UserNode *root, **head = &root;
+
+int serverstate = 1;
+
+char *porto_config;
+char *porto_noticias;
+
 pthread_t thread_id[2];
 pthread_mutex_t mutex_shm = PTHREAD_MUTEX_INITIALIZER;
-char *porto_config;
 
-void cleanup();
+void *udp(void *arg);
+
 void read_config_file(const char *config_file);
 int add_user(const char *username, const char *password, const char *type);
 int del(const char *username);
-void save_users(const char *config_file);
 
-void *udp(void *arg);
-void *tcp(void *arg);
+void erro(char *s);
 
 void erro(char *s)
 {
@@ -47,51 +50,20 @@ int main(int argc, char *argv[])
         printf("news_server {PORTO_NOTICIAS} {PORTO_CONFIG} {ficheiro configuração}\n");
         exit(1);
     }
-    read_config_file(argv[3]);
+    porto_noticias = argv[1];
     porto_config = argv[2];
+    read_config_file(argv[3]);
 
     if (pthread_create(&thread_id[0], NULL, udp, NULL))
-    {
-        perror("Error: Creating udp thread");
-        cleanup();
-        exit(1);
-    }
-    if (pthread_create(&thread_id[1], NULL, tcp, NULL))
-    {
-        perror("Error: Creating tcp thread");
-        cleanup();
-        exit(1);
-    }
+        erro("Error: Creating udp thread");
 
-    if (signal(SIGINT, cleanup) == SIG_ERR)
-    {
-        perror("Error: signal");
-        cleanup();
-        exit(1);
-    }
+    /* if (signal(SIGINT, cleanup) == SIG_ERR)
+         erro("Error: signal");*/
 
-    for (int i = 0; i < 2; i++)
-    {
-        if (pthread_join(thread_id[i], NULL))
-        {
-            perror("Error: waiting for a thread to finish");
-            exit(1);
-        }
-    }
-
-    save_users(argv[3]);
-
-    cleanup();
+    if (pthread_join(thread_id[0], NULL))
+        erro("Error: waiting for a thread to finish");
 
     return 0;
-}
-
-void cleanup()
-{
-    if (pthread_mutex_destroy(&mutex_shm))
-    {
-        perror("Error: destroy mutex");
-    }
 }
 
 void *udp(void *arg)
@@ -121,7 +93,7 @@ void *udp(void *arg)
     {
         erro("Erro no bind");
     }
-    int serverstate = 1;
+
     int num_args; // number of arguments that the user buf has
     UserNode *adminlogged = NULL;
 
@@ -292,41 +264,6 @@ void *udp(void *arg)
     pthread_exit(NULL);
 }
 
-void *tcp(void *arg)
-{
-    pthread_exit(NULL);
-}
-
-void save_users(const char *config_file)
-{
-    FILE *fp;
-
-    fp = fopen(config_file, "w");
-
-    if (fp == NULL)
-    {
-        perror("Erro ao abrir ficheiro de configurações.\n");
-        exit(1);
-    }
-
-    fclose(fp);
-
-    fp = fopen(config_file, "a");
-
-    if (fp == NULL)
-    {
-        perror("Erro ao abrir ficheiro de configurações.\n");
-        exit(1);
-    }
-
-    for (UserNode *atual = root; atual != NULL; atual = atual->next)
-    {
-        fprintf(fp, "%s;%s;%s\n", atual->username, atual->password, atual->type);
-    }
-
-    fclose(fp);
-}
-
 int del(const char *username)
 {
     for (UserNode *last = NULL, *atual = root; atual != NULL; last = atual, atual = atual->next)
@@ -361,10 +298,7 @@ int add_user(const char *username, const char *password, const char *type)
     UserNode *new_node = (UserNode *)malloc(sizeof(UserNode));
 
     if (new_node == NULL)
-    {
-        perror("erro a alocar memória para um novo utilizador");
-        exit(1);
-    }
+        erro("erro a alocar memória para um novo utilizador");
 
     strcpy(new_node->username, username);
     strcpy(new_node->password, password);
@@ -386,33 +320,21 @@ void read_config_file(const char *config_file)
     fp = fopen(config_file, "r");
 
     if (fp == NULL)
-    {
-        perror("Erro ao abrir ficheiro de configurações.\n");
-        exit(1);
-    }
+        erro("Erro ao abrir ficheiro de configurações.\n");
 
     while (fgets(line, sizeof(line), fp))
     {
         username = strtok(line, ";");
         if (username == NULL)
-        {
-            perror("Erro ao obter username");
-            exit(1);
-        }
+            erro("Erro ao obter username");
 
         password = strtok(NULL, ";");
         if (password == NULL)
-        {
-            perror("Erro ao obter password");
-            exit(1);
-        }
+            erro("Erro ao obter password");
 
         type = strtok(NULL, "\n");
         if (type == NULL)
-        {
-            perror("Erro ao obter type");
-            exit(1);
-        }
+            erro("Erro ao obter type");
 
         add_user(username, password, type);
     }
