@@ -347,6 +347,7 @@ void *handle_tcp(void *p_client_socket)
                 topics = new_node;
 
                 printf("topico criado\n");
+                write(client_socket, "topico criado\n", strlen("topico criado\n")); // enviar a resposta ao cliente
                 fflush(stdout);
             }
             else
@@ -374,6 +375,7 @@ void *handle_tcp(void *p_client_socket)
                         atual->next = new_node;
 
                         printf("topico criado\n");
+                        write(client_socket, "topico criado\n", strlen("topico criado\n")); // enviar a resposta ao cliente
                         fflush(stdout);
                         break;
                     }

@@ -105,6 +105,7 @@ void *multicast(void *topic_sub)
         }
 
         printf("Received multicast message: %s\n", message);
+        fflush(stdout);
     }
 
     ///////////////////////////////////////////
@@ -124,7 +125,8 @@ int main(int argc, char *argv[])
     if (argc != 3)
     { // numero de argumentos necessário é igual a 3
         printf("news_client <host> <port>\n");
-        exit(-1);
+        fflush(stdout);
+        exit(1);
     }
 
     strcpy(endServer, argv[1]);
@@ -233,10 +235,12 @@ int main(int argc, char *argv[])
 
     // menu
     printf("---MENU---\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n");
+    fflush(stdout);
 
     if (type == 2)
     {
         printf("CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\n");
+        fflush(stdout);
     }
 
     char copia[BUF_SIZE];
@@ -268,6 +272,7 @@ int main(int argc, char *argv[])
             read(fd, buffer, BUF_SIZE - 1);
 
             printf("%s\n", buffer);
+            fflush(stdout);
         }
         else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
@@ -279,9 +284,12 @@ int main(int argc, char *argv[])
             if (strcmp(buffer, "erro") == 0)
             {
                 printf("não foi possivel subscrever o topico\n");
+                fflush(stdout);
             }
             else
             { // procurar local
+                printf("%s\n", buffer);
+                fflush(stdout);
 
                 Subscription *atual = subscriptions;
 
@@ -376,15 +384,23 @@ int main(int argc, char *argv[])
             if (atual == NULL)
             {
                 printf("Você não está inscrito em nenhum Topico com esse id\n");
+                fflush(stdout);
             }
         }
         else if (type == 2 && strcmp(token, "CREATE_TOPIC") == 0)
         {
             write(fd, copia, strlen(copia));
+
+            bzero(buffer, BUF_SIZE);
+
+            read(fd, buffer, BUF_SIZE - 1);
+            printf("%s\n", buffer);
+            fflush(stdout);
         }
         else
         {
             printf("Comando errado\n");
+            fflush(stdout);
         }
     }
 
@@ -395,5 +411,6 @@ int main(int argc, char *argv[])
 void erro(char *msg)
 {
     printf("Erro: %s\n", msg);
+    fflush(stdout);
     exit(1);
 }
