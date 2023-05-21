@@ -41,8 +41,6 @@ void *multicast(void *topic_sub)
 
     Subscription *sub = (Subscription *)topic_sub;
 
-    printf("ip:%s\n", sub->ip);
-    fflush(stdout);
     ///////////////////////////////////////////
     struct sockaddr_in addr;
     int addrlen, sock;
