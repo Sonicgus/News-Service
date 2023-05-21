@@ -35,8 +35,6 @@ void erro(char *msg);
 
 void *multicast(void *topic_sub)
 {
-    printf("teste\n");
-    fflush(stdout);
     Subscription *sub = ((Subscription *)(topic_sub));
     ///////////////////////////////////////////
     struct sockaddr_in addr;
