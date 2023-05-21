@@ -237,7 +237,7 @@ void *handle_tcp(void *p_client_socket)
             sprintf(resposta, "---Lista de topicos:---\n");
             for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
             {
-                strcat(resposta, "%d - %s\n", atual->id, atual->Topic);
+                printf("%d - %s\n", atual->id, atual->Topic);
             }
             strcat(resposta, "-----------------------\n");
             write(client_socket, resposta, strlen(resposta));
@@ -246,13 +246,13 @@ void *handle_tcp(void *p_client_socket)
         {
             printf("SUBSCRIBE_TOPIC\n");
 
-            token = strtok(buffer, " ");
+            token = strtok(NULL, " ");
 
             int id = atoi(token);
 
-            TopicNode *atual = get_topic(id);
+            TopicNode *p_topic = get_topic(id);
 
-            if (atual == NULL)
+            if (p_topic == NULL)
             {
                 write(client_socket, "Topico com esse id não existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
             }
@@ -271,9 +271,9 @@ void *handle_tcp(void *p_client_socket)
 
                 if (atual == NULL)
                 {
-                    // sprintf(resposta, "%d;%s;%s", id, topic, ip);
+                    sprintf(resposta, "%d;%s;%s", p_topic->id, p_topic->ip, p_topic->Topic);
 
-                    // write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+                    write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
                 }
             }
         }
@@ -283,56 +283,102 @@ void *handle_tcp(void *p_client_socket)
 
             // verificar se existe um topico com o mesmo id
 
-            token = strtok(buffer, " ");
+            token = strtok(NULL, " ");
 
             int id = atoi(token);
 
-            TopicNode *atual;
+            printf("nice: %d\n", id);
 
-            for (atual = topics; atual != NULL; atual = atual->next)
+            if (topics == NULL)
             {
-                if (atual.next == NULL)
+
+                TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
+
+                new_node->id = id;
+
+                token = strtok(NULL, " ");
+                strcpy(new_node->Topic, token);
+
+                sprintf(new_node->ip, "224.0.0.%d", ++topiccount);
+
+                // create a UDP socket
+                if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
                 {
-                    token = strtok(buffer, " ");
-
-                    TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
-
-                    strcpy(new_node->Topic, token);
-
-                    sprintf(new_node->ip, "224.0.0.%d", ++topiccount);
-
-                    // create a UDP socket
-                    if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-                    {
-                        perror("socket");
-                        exit(1);
-                    }
-
-                    struct sockaddr_in addr;
-
-                    // set up the multicast address structure
-                    memset(&addr, 0, sizeof(addr));
-                    addr.sin_family = AF_INET;
-                    addr.sin_addr.s_addr = inet_addr(new_node->ip);
-                    addr.sin_port = htons(5000);
-
-                    // enable multicast on the socket
-                    int enable = 1;
-                    if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
-                    {
-                        perror("setsockopt");
-                        exit(1);
-                    }
-
-                    atual->next = new_node;
-
-                    printf("topico criado\n");
+                    perror("socket");
+                    exit(1);
                 }
-            }
 
-            if (atual != NULL)
+                struct sockaddr_in addr;
+
+                // set up the multicast address structure
+                memset(&addr, 0, sizeof(addr));
+                addr.sin_family = AF_INET;
+                addr.sin_addr.s_addr = inet_addr(new_node->ip);
+                addr.sin_port = htons(5000);
+
+                // enable multicast on the socket
+                int enable = 1;
+                if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
+                {
+                    perror("setsockopt");
+                    exit(1);
+                }
+
+                topics = new_node;
+
+                printf("topico criado\n");
+            }
+            else
             {
-                write(client_socket, "Topico com esse id já existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
+                TopicNode *atual;
+
+                for (atual = topics; atual != NULL; atual = atual->next)
+                {
+                    if (atual->next == NULL)
+                    {
+                        TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
+
+                        new_node->id = id;
+
+                        token = strtok(NULL, " ");
+
+                        strcpy(new_node->Topic, token);
+
+                        sprintf(new_node->ip, "224.0.0.%d", ++topiccount);
+
+                        // create a UDP socket
+                        if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+                        {
+                            perror("socket");
+                            exit(1);
+                        }
+
+                        struct sockaddr_in addr;
+
+                        // set up the multicast address structure
+                        memset(&addr, 0, sizeof(addr));
+                        addr.sin_family = AF_INET;
+                        addr.sin_addr.s_addr = inet_addr(new_node->ip);
+                        addr.sin_port = htons(5000);
+
+                        // enable multicast on the socket
+                        int enable = 1;
+                        if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
+                        {
+                            perror("setsockopt");
+                            exit(1);
+                        }
+
+                        atual->next = new_node;
+
+                        printf("topico criado\n");
+                    }
+                }
+
+                if (atual != NULL)
+                {
+                    write(client_socket, "Topico com esse id já existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
+                }
             }
         }
         else
