@@ -233,12 +233,20 @@ int main(int argc, char *argv[])
 
             Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-            sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
+            token = strtok(buffer, ";");
 
-            if (pthread_create(&atual->thread_id, NULL, multicast, (void *)atual))
-                erro("Error: Creating udp thread");
+            new_node->id = atoi(token);
+
+            token = strtok(NULL, ";");
+            strcpy(new_node->ip, token);
+
+            token = strtok(NULL, "\n");
+            strcpy(new_node->Topic, token);
 
             atual->next = new_node;
+
+            if (pthread_create(&atual->next->thread_id, NULL, multicast, (void *)atual->next))
+                erro("Error: Creating udp thread");
 
             atual = atual->next;
         }
@@ -299,32 +307,40 @@ int main(int argc, char *argv[])
             }
             else
             { // procurar local
-                printf("%s\n", buffer);
-                fflush(stdout);
-
-                Subscription *atual = subscriptions;
 
                 Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-                sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
+                token = strtok(buffer, ";");
+
+                new_node->id = atoi(token);
+
+                token = strtok(NULL, ";");
+                strcpy(new_node->ip, token);
+
+                token = strtok(NULL, "\n");
+                strcpy(new_node->Topic, token);
 
                 if (subscriptions == NULL)
                 {
                     subscriptions = new_node;
+
+                    if (pthread_create(&subscriptions->thread_id, NULL, multicast, (void *)subscriptions))
+                        erro("Error: Creating udp thread");
                 }
                 else
                 {
+                    Subscription *atual = subscriptions;
+
                     for (; atual != NULL; atual = atual->next)
                     {
                         if (atual->next == NULL)
                         {
                             atual->next = new_node;
+                            if (pthread_create(&atual->next->thread_id, NULL, multicast, (void *)atual->next))
+                                erro("Error: Creating udp thread");
                         }
                     }
                 }
-
-                if (pthread_create(&atual->thread_id, NULL, multicast, (void *)atual))
-                    erro("Error: Creating udp thread");
             }
 
             // se nao deu erro, entao adiciona na lista de topicos subscriptos e começa a receber mensagens do grupo multicast
