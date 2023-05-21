@@ -35,7 +35,9 @@ void erro(char *msg);
 
 void *multicast(void *topic_sub)
 {
-    Subscription *sub = ((Subscription *)(topic_sub));
+    Subscription *sub = (Subscription *)topic_sub;
+
+    printf("%s\n", sub->ip);
     ///////////////////////////////////////////
     struct sockaddr_in addr;
     int addrlen, sock;
@@ -204,7 +206,7 @@ int main(int argc, char *argv[])
 
         subscriptions = new_node;
 
-        if (pthread_create(&subscriptions->thread_id, NULL, multicast, subscriptions))
+        if (pthread_create(&subscriptions->thread_id, NULL, multicast, (void *)&subscriptions))
             erro("Error: Creating udp thread");
 
         Subscription *atual = subscriptions->next;
@@ -224,7 +226,7 @@ int main(int argc, char *argv[])
 
             sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
 
-            if (pthread_create(&atual->thread_id, NULL, multicast, atual))
+            if (pthread_create(&atual->thread_id, NULL, multicast, (void *)&atual))
                 erro("Error: Creating udp thread");
 
             atual->next = new_node;
@@ -316,7 +318,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                if (pthread_create(&atual->thread_id, NULL, multicast, atual))
+                if (pthread_create(&atual->thread_id, NULL, multicast, (void *)&atual))
                     erro("Error: Creating udp thread");
             }
 
