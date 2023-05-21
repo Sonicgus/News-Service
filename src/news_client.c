@@ -257,6 +257,11 @@ int main(int argc, char *argv[])
             {
                 /* code */
             }
+            else
+            {
+                Subscription *atual = subscriptions;
+                sscanf(buffer, "%d;%s;%s", atual->topic_node->id, atual->topic_node->ip, atual->topic_node->Topic);
+            }
 
             // se nao deu erro, entao adiciona na lista de topicos subscriptos e começa a receber mensagens do grupo multicast
         }
