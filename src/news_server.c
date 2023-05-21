@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     if (argc != 4)
     {
         printf("news_server {PORTO_NOTICIAS} {PORTO_CONFIG} {ficheiro configuração}\n");
+        fflush(stdout);
         exit(1);
     }
     porto_noticias = argv[1];
@@ -220,6 +221,7 @@ void *handle_tcp(void *p_client_socket)
         buffer[nread - 1] = '\0';
 
         printf("Um cliente enviou: %s\n", buffer);
+        fflush(stdout);
 
         char *token = strtok(buffer, " ");
 
@@ -232,11 +234,13 @@ void *handle_tcp(void *p_client_socket)
         if (strcmp(token, "LIST_TOPICS") == 0)
         {
             printf("LIST_TOPICS\n");
+            fflush(stdout);
 
             sprintf(resposta, "---Lista de topicos:---\n");
             for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
             {
                 printf("%d - %s\n", atual->id, atual->Topic);
+                fflush(stdout);
             }
             strcat(resposta, "-----------------------\n");
             write(client_socket, resposta, strlen(resposta));
@@ -244,6 +248,7 @@ void *handle_tcp(void *p_client_socket)
         else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
             printf("SUBSCRIBE_TOPIC\n");
+            fflush(stdout);
 
             token = strtok(NULL, " ");
 
@@ -255,6 +260,7 @@ void *handle_tcp(void *p_client_socket)
             {
                 write(client_socket, "erro", strlen("erro")); // enviar a resposta ao cliente
                 printf("Topico com esse id não existe\n");
+                fflush(stdout);
             }
             else
             {
@@ -272,6 +278,7 @@ void *handle_tcp(void *p_client_socket)
                 {
                     write(client_socket, "erro", strlen("erro")); // enviar a resposta ao cliente
                     printf("ja estava inscrito\n");
+                    fflush(stdout);
                 }
                 else
                 {
@@ -288,6 +295,7 @@ void *handle_tcp(void *p_client_socket)
                         user->subscriptions = new_node;
 
                         printf("subscriçao criada\n");
+                        fflush(stdout);
                     }
                     else
                     {
@@ -305,7 +313,7 @@ void *handle_tcp(void *p_client_socket)
                                 write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
 
                                 printf("subscriçao criada\n");
-
+                                fflush(stdout);
                                 atual->next = new_node;
                                 break;
                             }
@@ -317,6 +325,7 @@ void *handle_tcp(void *p_client_socket)
         else if (strcmp(token, "CREATE_TOPIC") == 0)
         {
             printf("CREATE_TOPIC\n");
+            fflush(stdout);
 
             // verificar se existe um topico com o mesmo id
 
@@ -338,6 +347,7 @@ void *handle_tcp(void *p_client_socket)
                 topics = new_node;
 
                 printf("topico criado\n");
+                fflush(stdout);
             }
             else
             {
@@ -364,6 +374,7 @@ void *handle_tcp(void *p_client_socket)
                         atual->next = new_node;
 
                         printf("topico criado\n");
+                        fflush(stdout);
                         break;
                     }
                 }
@@ -442,6 +453,7 @@ void *handle_udp(void *arg)
             buf[recv_len - 1] = '\0';
 
             printf("mensagem recebida:%s\n", buf);
+            fflush(stdout);
 
             // get each command parameter piece
             for (token = strtok(buf, " "); token != NULL && num_args < 5; token = strtok(NULL, " "))
@@ -495,6 +507,7 @@ void *handle_udp(void *arg)
             buf[recv_len - 1] = '\0';
 
             printf("\nComando recebido: %s\n", buf);
+            fflush(stdout);
 
             // get each command parameter piece
             for (token = strtok(buf, " "); token != NULL && num_args < 5; token = strtok(NULL, " "))
@@ -564,6 +577,7 @@ void *handle_udp(void *arg)
                 {
                     sprintf(buf, "%s;%s;%s\n", atual->username, atual->password, atual->type);
                     printf("%s;%s;%s\n", atual->username, atual->password, atual->type);
+                    fflush(stdout);
 
                     if (sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&si_outra, slen) == -1)
                     {
@@ -580,6 +594,7 @@ void *handle_udp(void *arg)
             {
                 // wrong command
                 printf("Comando errado\n");
+                fflush(stdout);
                 if (sendto(s, "Comando errado\n", strlen("Comando errado\n"), 0, (struct sockaddr *)&si_outra, slen) == -1)
                 {
                     erro("Erro no envio da mensagem");
@@ -626,6 +641,7 @@ int add_user(const char *username, const char *password, const char *type)
     if (strcmp(type, "administrator") != 0 && strcmp(type, "jornalista") != 0 && strcmp(type, "leitor") != 0)
     {
         printf("tipo errado\n");
+        fflush(stdout);
         exit(1);
     }
 
