@@ -287,49 +287,54 @@ void *handle_tcp(void *p_client_socket)
 
             int id = atoi(token);
 
-            TopicNode *atual = get_topic(id);
+            TopicNode *atual;
+
+            for (atual = topics; atual != NULL; atual = atual->next)
+            {
+                if (atual.next == NULL)
+                {
+                    token = strtok(buffer, " ");
+
+                    TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
+
+                    strcpy(new_node->Topic, token);
+
+                    sprintf(new_node->ip, "224.0.0.%d", ++topiccount);
+
+                    // create a UDP socket
+                    if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+                    {
+                        perror("socket");
+                        exit(1);
+                    }
+
+                    struct sockaddr_in addr;
+
+                    // set up the multicast address structure
+                    memset(&addr, 0, sizeof(addr));
+                    addr.sin_family = AF_INET;
+                    addr.sin_addr.s_addr = inet_addr(new_node->ip);
+                    addr.sin_port = htons(5000);
+
+                    // enable multicast on the socket
+                    int enable = 1;
+                    if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
+                    {
+                        perror("setsockopt");
+                        exit(1);
+                    }
+
+                    atual->next = new_node;
+
+                    printf("topico criado\n");
+                }
+            }
 
             if (atual != NULL)
             {
                 write(client_socket, "Topico com esse id já existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
             }
-            else
-            {
-                token = strtok(buffer, " ");
-
-                TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
-
-                strcpy(new_node->Topic, token);
-
-                sprintf(new_node->ip, "224.0.0.%d", ++topiccount);
-
-                // create a UDP socket
-                if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-                {
-                    perror("socket");
-                    exit(1);
-                }
-
-                struct sockaddr_in addr;
-
-                // set up the multicast address structure
-                memset(&addr, 0, sizeof(addr));
-                addr.sin_family = AF_INET;
-                addr.sin_addr.s_addr = inet_addr(new_node->ip);
-                addr.sin_port = htons(5000);
-
-                // enable multicast on the socket
-                int enable = 1;
-                if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
-                {
-                    perror("setsockopt");
-                    exit(1);
-                }
-
-                printf("topico criado\n");
-            }
         }
-
         else
         {
             sprintf(resposta, "Comando errado\n");
