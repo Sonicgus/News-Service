@@ -185,6 +185,7 @@ void *handle_tcp(void *p_client_socket)
             {
                 write(client_socket, user->type, sizeof(user->type));
                 printf("enviei o tipo\n");
+                fflush(stdout);
                 break;
             }
         }
@@ -252,7 +253,8 @@ void *handle_tcp(void *p_client_socket)
 
             if (p_topic == NULL)
             {
-                write(client_socket, "Topico com esse id não existe\n", strlen("Topico com esse id não existe\n")); // enviar a resposta ao cliente
+                write(client_socket, "erro", strlen("erro")); // enviar a resposta ao cliente
+                printf("Topico com esse id não existe\n");
             }
             else
             {
@@ -268,6 +270,7 @@ void *handle_tcp(void *p_client_socket)
                 }
                 if (atual != NULL)
                 {
+                    write(client_socket, "erro", strlen("erro")); // enviar a resposta ao cliente
                     printf("ja estava inscrito\n");
                 }
                 else

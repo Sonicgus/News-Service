@@ -248,9 +248,9 @@ int main(int argc, char *argv[])
 
         fgets(buffer, sizeof(buffer), stdin); // pedir ao usuário a mensagem a enviar
 
-        if (strcmp(buffer, "EXIT\n"))
+        if (strcmp(buffer, "EXIT\n") == 0)
         {
-            write(fd, "EXIT", strlen("EXIT")); // enviar a mensagem
+            write(fd, "EXIT\n", strlen("EXIT\n")); // enviar a mensagem
             turnoff = 1;
             break;
         }
@@ -259,9 +259,15 @@ int main(int argc, char *argv[])
 
         char *token = strtok(buffer, " ");
 
-        if (strcmp(token, "LIST_TOPICS") == 0)
+        if (strcmp(copia, "LIST_TOPICS\n") == 0)
         {
             write(fd, "LIST_TOPICS\n", strlen("LIST_TOPICS\n"));
+
+            bzero(buffer, BUF_SIZE);
+
+            read(fd, buffer, BUF_SIZE - 1);
+
+            printf("%s\n", buffer);
         }
         else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
@@ -272,7 +278,7 @@ int main(int argc, char *argv[])
 
             if (strcmp(buffer, "erro") == 0)
             {
-                /* code */
+                printf("não foi possivel subscrever o topico\n");
             }
             else
             { // procurar local
