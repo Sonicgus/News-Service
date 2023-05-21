@@ -210,26 +210,30 @@ int main(int argc, char *argv[])
         bzero(buffer, BUF_SIZE);        // limpar o buffer preenchendo com zeros
         read(fd, buffer, BUF_SIZE - 1); // guardar a informação recebida no buffer
         printf("%s", buffer);           // imprimir a menssagem recebida
+        char *token = strtok(buffer, " ");
 
-        if (strcmp(buffer, "EXIT\n"))
+        if (strcmp(token, "EXIT\n"))
         {
             write(fd, "EXIT", strlen("EXIT")); // enviar a mensagem
             turnoff = 1;
             break;
         }
 
-        if (strcmp(buffer, "LIST_TOPICS") == 0)
+        if (strcmp(token, "LIST_TOPICS") == 0)
         {
             write(fd, buffer, strlen(buffer));
         }
-        else if (strcmp(buffer, "SUBSCRIBE_TOPIC") == 0)
+        else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
             write(fd, buffer, strlen(buffer));
 
             // se nao deu erro, entao adiciona na lista de topicos subscriptos e começa a receber mensagens do grupo multicast
         }
-        else if (type == 2 && strcmp(buffer, "SEND_NEWS") == 0)
+        else if (type == 2 && strcmp(token, "SEND_NEWS") == 0)
         {
+            token = strtok(NULL, " ");
+            int id = atoi(token);
+            token = strtok(NULL, " ");
             // verificar se o jornalista esta subscrito no topico
             Subscription *atual;
             for (atual = subscriptions; atual != NULL; atual = atual->next)
@@ -271,7 +275,7 @@ int main(int argc, char *argv[])
 
                             addr.sin_addr.s_addr = inet_addr(atual->ip);
 
-                            sprintf(message, "%s\n", buffer);
+                            sprintf(message, "%s\n", token);
 
                             cnt = sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, addrlen);
 
@@ -291,7 +295,7 @@ int main(int argc, char *argv[])
                 printf("Você não está inscrito em nenhum Topico com esse id\n");
             }
         }
-        else if (type == 2 && strcmp(buffer, "CREATE_TOPIC") == 0)
+        else if (type == 2 && strcmp(token, "CREATE_TOPIC") == 0)
         {
             write(fd, buffer, strlen(buffer));
         }
