@@ -410,6 +410,7 @@ void *handle_tcp(void *p_client_socket)
                         atual->next = new_node;
 
                         printf("topico criado\n");
+                        break;
                     }
                 }
             }
