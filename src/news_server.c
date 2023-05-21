@@ -36,7 +36,7 @@ typedef struct user_node
 } UserNode;
 
 UserNode *root, **head = &root;
-TopicNode topics[TOPICSLEN];
+TopicNode *topics;
 
 int topiccount = 0;
 
@@ -50,6 +50,8 @@ pthread_mutex_t mutex_shm = PTHREAD_MUTEX_INITIALIZER;
 
 void *handle_udp(void *arg);
 void *handle_tcp(void *p_client_socket);
+
+TopicNode *get_topic(int id);
 
 void tcp_server();
 
@@ -216,38 +218,75 @@ void *handle_tcp(void *p_client_socket)
             nread = read(client_socket, buffer, BUFLEN - 1);
         } while (nread < 2);
 
+        buffer[nread - 1] = '\0';
+
         printf("Um cliente enviou: %s\n", buffer);
 
+        char *token = strtok(buffer, " ");
+
         // verificar se o cliente deseja terminar a sessão
-        if (strcmp(buffer, "EXIT") == 0)
+        if (strcmp(token, "EXIT") == 0)
         {
             break;
         }
 
-        if (strcmp(buffer, "LIST_TOPICS") == 0)
+        if (strcmp(token, "LIST_TOPICS") == 0)
         {
             for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
             {
-                printf("%s\n", atual->Topic);
+                printf("%d - %s\n", atual->id, atual->Topic);
             }
         }
-        else if (strcmp(buffer, "SUBSCRIBE_TOPIC") == 0)
+        else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
-            // verificar se já esta inscrito no topico
+            printf("SUBSCRIBE_TOPIC\n");
 
-            // sprintf(resposta, "%d;%s;%s", id, topic, ip);
+            token = strtok(buffer, " ");
 
-            // write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
-        }
-        else if (strcmp(buffer, "CREATE_TOPIC") == 0)
-        {
-            // verificar se existe um topico com o mesmo id
-            for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
+            int id = atoi(token);
+
+            TopicNode *atual = get_topic(id);
+
+            if (atual == NULL)
             {
-                if (atual->id == atoi("string com o id"))
+                write(client_socket, "Topico com esse id não existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
+            }
+            else
+            {
+                // verificar se já esta inscrito no topico
+                Subscription *atual;
+                for (atual = user->subscriptions; atual != NULL; atual = atual->next)
                 {
-                    // erro
+                    if (atual->topic_node->id == id)
+                    {
+                        printf("ja estava subscrito\n");
+                        break;
+                    }
                 }
+
+                if (atual == NULL)
+                {
+                    // sprintf(resposta, "%d;%s;%s", id, topic, ip);
+
+                    // write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+                }
+            }
+        }
+        else if (strcmp(token, "CREATE_TOPIC") == 0)
+        {
+            printf("CREATE_TOPIC\n");
+
+            // verificar se existe um topico com o mesmo id
+
+            token = strtok(buffer, " ");
+
+            int id = atoi(token);
+
+            TopicNode *atual = get_topic(id);
+
+            if (atual == NULL)
+            {
+                write(client_socket, "Topico com esse id não existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
             }
 
             TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
@@ -278,12 +317,6 @@ void *handle_tcp(void *p_client_socket)
             }
 
             printf("topico criado\n");
-
-            // id;ip;topic
-
-            // sprintf(resposta, "%d;%s;%s", id, ip, topic);
-
-            // write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
         }
 
         else
@@ -296,6 +329,19 @@ void *handle_tcp(void *p_client_socket)
     close(client_socket);
 
     pthread_exit(NULL);
+}
+
+TopicNode *get_topic(int id)
+{
+    for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
+    {
+        if (atual->id == id)
+        {
+            return atual;
+        }
+    }
+
+    return NULL;
 }
 
 void *handle_udp(void *arg)
