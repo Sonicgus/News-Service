@@ -34,7 +34,7 @@ int serverstate = 1;
 char *porto_config;
 char *porto_noticias;
 
-pthread_t thread_id[2];
+pthread_t thread_id;
 pthread_mutex_t mutex_shm = PTHREAD_MUTEX_INITIALIZER;
 
 void *handle_udp(void *arg);
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     porto_config = argv[2];
     read_config_file(argv[3]);
 
-    if (pthread_create(&thread_id[0], NULL, handle_udp, NULL))
+    if (pthread_create(&thread_id, NULL, handle_udp, NULL))
         erro("Error: Creating udp thread");
 
     /* if (signal(SIGINT, cleanup) == SIG_ERR)
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 
     tcp_server();
 
-    if (pthread_join(thread_id[0], NULL))
+    if (pthread_join(thread_id, NULL))
         erro("Error: waiting for a thread to finish");
 
     return 0;
@@ -126,12 +126,14 @@ void *handle_tcp(void *p_client_socket)
     char *cmd_args[5]; // pointer that stores command arguments
     char *token;
 
+    char username[50], password[50];
+
     UserNode *user = NULL;
 
     write(client_socket, "Bem-vindo ao servidor. Insere o username e password\n", sizeof("Bem-vindo ao servidor. Insere o username e password\n"));
 
     int num_args;
-    while (user == NULL)
+    while (serverstate)
     {
         num_args = 0;
 
@@ -140,6 +142,8 @@ void *handle_tcp(void *p_client_socket)
         int recv_len = read(client_socket, buffer, BUFLEN - 1);
 
         buffer[recv_len - 1] = '\0';
+
+        sscanf(buffer, "%s %s", username, password);
 
         printf("mensagem recebida:%s\n", buffer);
 
@@ -157,16 +161,32 @@ void *handle_tcp(void *p_client_socket)
         {
             for (UserNode *atual = root; atual != NULL; atual = atual->next)
             {
-                if ((strcmp(atual->type, "administrator") != 0) && (strcmp(atual->username, cmd_args[0]) == 0) && (strcmp(atual->password, cmd_args[1])) == 0)
+                if (strcmp(atual->type, "administrator") != 0 && strcmp(atual->username, username) == 0 && strcmp(atual->password, password) == 0)
                 {
                     user = atual;
-
-                    write(client_socket, "Sessão iniciada\n", sizeof("Sessão iniciada\n"));
-
                     break;
                 }
             }
+
+            if (user == NULL)
+            {
+                write(client_socket, "credenciais erradas\n", strlen("credenciais erradas\n"));
+            }
+            else
+            {
+                write(client_socket, "Sessão iniciada\n", sizeof("Sessão iniciada\n"));
+                break;
+            }
         }
+    }
+
+    if (strcmp(user->type, "leitor") == 0)
+    {
+        write(client_socket, "CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\n", sizeof("CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\n"));
+    }
+    else
+    {
+        write(client_socket, "LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n", sizeof("LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n"));
     }
 
     while (serverstate)
@@ -422,9 +442,15 @@ int add_user(const char *username, const char *password, const char *type)
     for (UserNode *last = NULL, *atual = root; atual != NULL; last = atual, atual = atual->next)
     {
         if (strcmp(atual->username, username) == 0)
-        {
+        { // ja existe um user com esse username
             return 0;
         }
+    }
+
+    if (strcmp(type, "administrator") != 0 || strcmp(type, "jornalista") != 0 || strcmp(type, "leitor") != 0)
+    {
+        printf("tipo errado\n");
+        exit(1);
     }
 
     UserNode *new_node = (UserNode *)malloc(sizeof(UserNode));
@@ -447,17 +473,27 @@ void read_config_file(const char *config_file)
 {
     FILE *fp;
 
-    char line[100];
+    char line[100], *username, *password, *type;
 
     fp = fopen(config_file, "r");
 
     if (fp == NULL)
         erro("Erro ao abrir ficheiro de configurações.\n");
 
-    char username[21], password[21], type[15];
-
-    while (fscanf(fp, "%20[^;];%20[^;];%14s", username, password, type) == 3)
+    while (fgets(line, sizeof(line), fp))
     {
+        username = strtok(line, ";");
+        if (username == NULL)
+            erro("Erro ao obter username");
+
+        password = strtok(NULL, ";");
+        if (password == NULL)
+            erro("Erro ao obter password");
+
+        type = strtok(NULL, "\n");
+        if (type == NULL)
+            erro("Erro ao obter type");
+
         add_user(username, password, type);
     }
 
