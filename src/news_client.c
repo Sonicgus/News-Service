@@ -64,6 +64,8 @@ void *multicast(void *topic_sub)
     addr.sin_addr.s_addr = htons(INADDR_ANY);
     addr.sin_port = htons(MCPORT);
 
+    addrlen = sizeof(addr);
+
     ////////////////////recive///////////////////////
     struct ip_mreq mreq;
 
@@ -85,7 +87,8 @@ void *multicast(void *topic_sub)
     {
         // receive the multicast message
         int nbytes;
-        if ((nbytes = recvfrom(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, &addrlen)) < 0)
+        if ((nbytes = recvfrom(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, (socklen_t *)&addrlen)) < 0)
+
         {
             perror("recvfrom");
             exit(1);
@@ -107,6 +110,7 @@ void *multicast(void *topic_sub)
     ///////////////////////////////////////////
 
     close(sock);
+    pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[])
