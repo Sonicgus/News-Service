@@ -196,18 +196,23 @@ int main(int argc, char *argv[])
     if (strcmp(buffer, "FIM") != 0)
     {
 
-        Subscription *atual = subscriptions;
+        printf("nao é fim\n");
+        fflush(stdout);
 
         Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-        sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
+        char aux[50];
 
-        if (pthread_create(&atual->thread_id, NULL, multicast, atual))
-            erro("Error: Creating udp thread");
+        sscanf(buffer, "%s;%s;%s", aux, new_node->ip, new_node->Topic);
+
+        new_node->id = atoi(aux);
 
         subscriptions = new_node;
 
-        atual = atual->next;
+        if (pthread_create(&subscriptions->thread_id, NULL, multicast, subscriptions))
+            erro("Error: Creating udp thread");
+
+        Subscription *atual = subscriptions->next;
 
         while (!turnoff)
         {
@@ -295,7 +300,11 @@ int main(int argc, char *argv[])
 
                 Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-                sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
+                char aux[20];
+
+                sscanf(buffer, "%s;%s;%s", aux, new_node->ip, new_node->Topic);
+
+                new_node->id = atoi(aux);
 
                 if (subscriptions == NULL)
                 {
