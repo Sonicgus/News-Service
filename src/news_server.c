@@ -447,7 +447,7 @@ int add_user(const char *username, const char *password, const char *type)
         }
     }
 
-    if (strcmp(type, "administrator") != 0 || strcmp(type, "jornalista") != 0 || strcmp(type, "leitor") != 0)
+    if (strcmp(type, "administrator") != 0 && strcmp(type, "jornalista") != 0 && strcmp(type, "leitor") != 0)
     {
         printf("tipo errado\n");
         exit(1);
