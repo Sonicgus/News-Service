@@ -35,9 +35,14 @@ void erro(char *msg);
 
 void *multicast(void *topic_sub)
 {
+
+    printf("teste\n");
+    fflush(stdout);
+
     Subscription *sub = (Subscription *)topic_sub;
 
-    printf("%s\n", sub->ip);
+    printf("ip:%s\n", sub->ip);
+    fflush(stdout);
     ///////////////////////////////////////////
     struct sockaddr_in addr;
     int addrlen, sock;
@@ -198,15 +203,21 @@ int main(int argc, char *argv[])
 
         Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-        char aux[50];
+        printf("%s\n", buffer);
 
-        sscanf(buffer, "%s;%s;%s", aux, new_node->ip, new_node->Topic);
+        char *token = strtok(buffer, ";");
 
-        new_node->id = atoi(aux);
+        new_node->id = atoi(token);
+
+        token = strtok(NULL, ";");
+        strcpy(new_node->ip, token);
+
+        token = strtok(NULL, "\n");
+        strcpy(new_node->Topic, token);
 
         subscriptions = new_node;
 
-        if (pthread_create(&subscriptions->thread_id, NULL, multicast, (void *)&subscriptions))
+        if (pthread_create(&subscriptions->thread_id, NULL, multicast, (void *)subscriptions))
             erro("Error: Creating udp thread");
 
         Subscription *atual = subscriptions->next;
@@ -226,7 +237,7 @@ int main(int argc, char *argv[])
 
             sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
 
-            if (pthread_create(&atual->thread_id, NULL, multicast, (void *)&atual))
+            if (pthread_create(&atual->thread_id, NULL, multicast, (void *)atual))
                 erro("Error: Creating udp thread");
 
             atual->next = new_node;
@@ -297,11 +308,7 @@ int main(int argc, char *argv[])
 
                 Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-                char aux[20];
-
-                sscanf(buffer, "%s;%s;%s", aux, new_node->ip, new_node->Topic);
-
-                new_node->id = atoi(aux);
+                sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
 
                 if (subscriptions == NULL)
                 {
@@ -318,7 +325,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                if (pthread_create(&atual->thread_id, NULL, multicast, (void *)&atual))
+                if (pthread_create(&atual->thread_id, NULL, multicast, (void *)atual))
                     erro("Error: Creating udp thread");
             }
 
