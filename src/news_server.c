@@ -182,11 +182,11 @@ void *handle_tcp(void *p_client_socket)
 
     if (strcmp(user->type, "leitor") == 0)
     {
-        write(client_socket, "CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\n", sizeof("CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\n"));
+        write(client_socket, "CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n", sizeof("CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n"));
     }
     else
     {
-        write(client_socket, "LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n", sizeof("LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n"));
+        write(client_socket, "LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n", sizeof("LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n"));
     }
 
     while (serverstate)
