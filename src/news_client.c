@@ -35,6 +35,8 @@ void erro(char *msg);
 
 void *multicast(void *topic_sub)
 {
+    printf("teste\n");
+    fflush(stdout);
     Subscription *sub = ((Subscription *)(topic_sub));
     ///////////////////////////////////////////
     struct sockaddr_in addr;
@@ -51,13 +53,6 @@ void *multicast(void *topic_sub)
         perror("socket");
         exit(1);
     }
-    int multicastTTL = 255;
-
-    if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&multicastTTL, sizeof(multicastTTL)))
-    {
-        perror("socketopt");
-        exit(1);
-    }
 
     bzero((char *)&addr, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -67,20 +62,20 @@ void *multicast(void *topic_sub)
     addrlen = sizeof(addr);
 
     ////////////////////recive///////////////////////
-    struct ip_mreq mreq;
 
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         perror("bind");
         exit(1);
     }
-
+    struct ip_mreq mreq;
     mreq.imr_multiaddr.s_addr = inet_addr(sub->ip);
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 
     if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
     {
         perror("setsockopt mreq");
+        exit(1);
     }
 
     while (!turnoff)
@@ -106,6 +101,11 @@ void *multicast(void *topic_sub)
 
         printf("Received multicast message: %s\n", message);
         fflush(stdout);
+    }
+
+    if (setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
+    {
+        perror("setsockopt mreq");
     }
 
     ///////////////////////////////////////////
@@ -195,9 +195,6 @@ int main(int argc, char *argv[])
 
     if (strcmp(buffer, "FIM") != 0)
     {
-
-        printf("nao é fim\n");
-        fflush(stdout);
 
         Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
