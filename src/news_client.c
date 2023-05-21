@@ -204,8 +204,6 @@ int main(int argc, char *argv[])
 
         Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-        printf("%s\n", buffer);
-
         char *token = strtok(buffer, ";");
 
         new_node->id = atoi(token);
