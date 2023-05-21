@@ -154,12 +154,12 @@ int main(int argc, char *argv[])
             turnoff = 1;
             break;
         }
-        if (strcmp(buffer, "leitor\n"))
+        if (strcmp(buffer, "leitor"))
         {
             type = 1;
             break;
         }
-        if (strcmp(buffer, "jornalista\n"))
+        if (strcmp(buffer, "jornalista"))
         {
             type = 2;
             break;
@@ -169,9 +169,35 @@ int main(int argc, char *argv[])
     printf("Sessão iniciada com sucesso!\n");
 
     // receber topicos nos quais esta inscrito
-
     Subscription *atual = subscriptions;
-    while (1)
+
+    if (!turnoff)
+    {
+        if (subscriptions == NULL)
+        {
+            bzero(buffer, BUF_SIZE);
+            read(fd, buffer, BUF_SIZE - 1);
+            // printf("%s", buffer);
+
+            if (strcmp(buffer, "FIM"))
+            {
+                break;
+            }
+
+            Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
+
+            sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
+
+            if (pthread_create(&atual->thread_id, NULL, multicast, atual))
+                erro("Error: Creating udp thread");
+
+            subscriptions = new_node;
+
+            atual = atual->next;
+        }
+    }
+
+    while (!turnoff)
     {
         bzero(buffer, BUF_SIZE);
         read(fd, buffer, BUF_SIZE - 1);
@@ -188,6 +214,8 @@ int main(int argc, char *argv[])
 
         if (pthread_create(&atual->thread_id, NULL, multicast, atual))
             erro("Error: Creating udp thread");
+
+        atual->next = new_node;
 
         atual = atual->next;
     }
@@ -221,6 +249,14 @@ int main(int argc, char *argv[])
         else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
             write(fd, buffer, strlen(buffer));
+
+            bzero(buffer, BUF_SIZE);
+            read(fd, buffer, BUF_SIZE - 1);
+
+            if (strcmp(buffer, "erro") == 0)
+            {
+                /* code */
+            }
 
             // se nao deu erro, entao adiciona na lista de topicos subscriptos e começa a receber mensagens do grupo multicast
         }
