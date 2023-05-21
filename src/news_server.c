@@ -3,31 +3,42 @@
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
-
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define BUFLEN 512 // Tamanho do buffer
-
-typedef struct user_node
-{
-    char username[21];
-    char password[21];
-    char type[15];
-    struct user_node *next;
-} UserNode;
+#define BUFLEN 1024 // Tamanho do buffer
+#define TOPICSLEN 10
 
 typedef struct topic_node
 {
     int id;
     char Topic[21];
     char ip[40];
+    int fd;
     struct topic_node *next;
 } TopicNode;
 
+typedef struct subscription
+{
+    TopicNode *topic_node;
+    struct subscription *next;
+} Subscription;
+
+typedef struct user_node
+{
+    char username[21];
+    char password[21];
+    char type[15];
+    Subscription *subscriptions;
+    struct user_node *next;
+} UserNode;
+
 UserNode *root, **head = &root;
+TopicNode topics[TOPICSLEN];
+
+int topiccount = 0;
 
 int serverstate = 1;
 
@@ -143,12 +154,10 @@ void *handle_tcp(void *p_client_socket)
 
         buffer[recv_len - 1] = '\0';
 
-        sscanf(buffer, "%s %s", username, password);
-
-        printf("mensagem recebida:%s\n", buffer);
+        printf("Mensagem recebida:%s\n", buffer);
 
         // get each command parameter piece
-        for (token = strtok(buffer, " "); token != NULL && num_args < 5; token = strtok(NULL, " "))
+        for (token = strtok(buffer, " "); token != NULL && num_args < 2; token = strtok(NULL, " "))
         {
             cmd_args[num_args++] = token;
         }
@@ -157,11 +166,12 @@ void *handle_tcp(void *p_client_socket)
         {
             write(client_socket, "Deve inserir:\nUsername Password\n", sizeof("Deve inserir:\nUsername Password\n"));
         }
+
         else
         {
             for (UserNode *atual = root; atual != NULL; atual = atual->next)
             {
-                if (strcmp(atual->type, "administrator") != 0 && strcmp(atual->username, username) == 0 && strcmp(atual->password, password) == 0)
+                if (strcmp(atual->type, "administrator") != 0 && strcmp(atual->username, cmd_args[0]) == 0 && strcmp(atual->password, cmd_args[1]) == 0)
                 {
                     user = atual;
                     break;
@@ -174,43 +184,113 @@ void *handle_tcp(void *p_client_socket)
             }
             else
             {
-                write(client_socket, "Sessão iniciada\n", sizeof("Sessão iniciada\n"));
+                write(client_socket, user->type, sizeof(user->type));
                 break;
             }
         }
     }
 
-    if (strcmp(user->type, "leitor") == 0)
+    // enviar topicos no quais o cliente esta inscrito
+    // id;ip;topic
+
+    for (Subscription *atual = user->subscriptions; atual != NULL; atual = atual->next)
     {
-        write(client_socket, "CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n", sizeof("CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\nLIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n"));
+        sprintf(resposta, "%d;%s;%s", atual->topic_node->id, atual->topic_node->ip, atual->topic_node->Topic);
+
+        write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
     }
-    else
-    {
-        write(client_socket, "LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n", sizeof("LIST_TOPICS\nSUBSCRIBE_TOPIC <id do tópico>\n"));
-    }
+
+    write(client_socket, "FIM", sizeof("FIM"));
 
     while (serverstate)
     {
+        int nread;
 
         // limpar variaveis buffer,resposta e ip
         bzero(buffer, BUFLEN);
         bzero(resposta, BUFLEN);
 
         // obter a mensagem enviada do cliente
-        read(client_socket, buffer, BUFLEN - 1);
+        do
+        {
+            nread = read(client_socket, buffer, BUFLEN - 1);
+        } while (nread < 2);
 
-        printf("Recebi de um cliente: %s\n", buffer);
+        printf("Um cliente enviou: %s\n", buffer);
 
         // verificar se o cliente deseja terminar a sessão
-        if (strncmp(buffer, "SAIR", 4) == 0)
+        if (strcmp(buffer, "EXIT") == 0)
         {
-            write(client_socket, "Até logo!\n", 10);
             break;
         }
 
-        sprintf(resposta, "recebi isso :)\n");
+        if (strcmp(buffer, "LIST_TOPICS") == 0)
+        {
+            for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
+            {
+                printf("%s\n", atual->Topic);
+            }
+        }
+        else if (strcmp(buffer, "SUBSCRIBE_TOPIC") == 0)
+        {
+            // verificar se já esta inscrito no topico
 
-        write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+            // sprintf(resposta, "%d;%s;%s", id, topic, ip);
+
+            // write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+        }
+        else if (strcmp(buffer, "CREATE_TOPIC") == 0)
+        {
+            // verificar se existe um topico com o mesmo id
+            for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
+            {
+                if (atual->id == atoi("string com o id"))
+                {
+                    // erro
+                }
+            }
+
+            TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
+
+            sprintf(new_node->ip, "224.0.0.%d", ++topiccount);
+
+            // create a UDP socket
+            if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+            {
+                perror("socket");
+                exit(1);
+            }
+
+            struct sockaddr_in addr;
+
+            // set up the multicast address structure
+            memset(&addr, 0, sizeof(addr));
+            addr.sin_family = AF_INET;
+            addr.sin_addr.s_addr = inet_addr(new_node->ip);
+            addr.sin_port = htons(5000);
+
+            // enable multicast on the socket
+            int enable = 1;
+            if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
+            {
+                perror("setsockopt");
+                exit(1);
+            }
+
+            printf("topico criado\n");
+
+            // id;ip;topic
+
+            // sprintf(resposta, "%d;%s;%s", id, ip, topic);
+
+            // write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+        }
+
+        else
+        {
+            sprintf(resposta, "Comando errado\n");
+            write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+        }
     }
 
     close(client_socket);
