@@ -359,60 +359,55 @@ int main(int argc, char *argv[])
             token = strtok(NULL, " ");
             // verificar se o jornalista esta subscrito no topico
             Subscription *atual;
+
             for (atual = subscriptions; atual != NULL; atual = atual->next)
             {
-                if (atual->id == atoi("obtido do user"))
-                {
-                    for (Subscription *atual = subscriptions; atual != NULL; atual = atual->next)
+                if (atual->id == id)
+                { // esta subscrito
+
+                    struct sockaddr_in addr;
+                    int sock, cnt;
+
+                    char message[50];
+
+                    /*set up socket*/
+
+                    sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+                    if (sock < 0)
                     {
-                        if (atual->id == id)
-                        { // esta subscrito
-
-                            struct sockaddr_in addr;
-                            int sock, cnt;
-
-                            char message[50];
-
-                            /*set up socket*/
-
-                            sock = socket(AF_INET, SOCK_DGRAM, 0);
-
-                            if (sock < 0)
-                            {
-                                perror("socket");
-                                exit(1);
-                            }
-                            int multicastTTL = 255;
-
-                            if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&multicastTTL, sizeof(multicastTTL)))
-                            {
-                                perror("socketopt");
-                                exit(1);
-                            }
-
-                            bzero((char *)&addr, sizeof(addr));
-                            addr.sin_family = AF_INET;
-                            addr.sin_addr.s_addr = htons(INADDR_ANY);
-                            addr.sin_port = htons(MCPORT);
-                            /////////send message//////
-
-                            addr.sin_addr.s_addr = inet_addr(atual->ip);
-
-                            sprintf(message, "%s\n", token);
-
-                            cnt = sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, sizeof(addr));
-
-                            if (cnt < 0)
-                            {
-                                perror("sendto");
-                                exit(1);
-                            }
-
-                            close(sock);
-
-                            break;
-                        }
+                        perror("socket");
+                        exit(1);
                     }
+                    int multicastTTL = 255;
+
+                    if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&multicastTTL, sizeof(multicastTTL)))
+                    {
+                        perror("socketopt");
+                        exit(1);
+                    }
+
+                    bzero((char *)&addr, sizeof(addr));
+                    addr.sin_family = AF_INET;
+                    addr.sin_addr.s_addr = htons(INADDR_ANY);
+                    addr.sin_port = htons(MCPORT);
+                    /////////send message//////
+
+                    addr.sin_addr.s_addr = inet_addr(atual->ip);
+
+                    sprintf(message, "%s\n", token);
+
+                    cnt = sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, sizeof(addr));
+
+                    if (cnt < 0)
+                    {
+                        perror("sendto");
+                        exit(1);
+                    }
+
+                    close(sock);
+
+                    break;
                 }
             }
             if (atual == NULL)
