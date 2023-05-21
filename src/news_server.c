@@ -204,6 +204,9 @@ void *handle_tcp(void *p_client_socket)
 
     write(client_socket, "FIM", sizeof("FIM"));
 
+    printf("enviei FIM\n");
+    fflush(stdout);
+
     while (serverstate)
     {
         int nread;

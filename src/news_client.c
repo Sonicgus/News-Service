@@ -66,6 +66,13 @@ void *multicast(void *topic_sub)
 
     ////////////////////recive///////////////////////
 
+    int reuse = 255;
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
+    {
+        perror("setsockopt SO_REUSEADDR");
+        exit(1);
+    }
+
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         perror("bind");
