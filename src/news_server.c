@@ -232,10 +232,14 @@ void *handle_tcp(void *p_client_socket)
 
         if (strcmp(token, "LIST_TOPICS") == 0)
         {
+            sprintf(resposta,"---Lista de topicos:---\n")
             for (TopicNode *atual = topics; atual != NULL; atual = atual->next)
             {
+                strcat(resposta, "%d - %s\n", atual->id, atual->Topic);
                 printf("%d - %s\n", atual->id, atual->Topic);
             }
+            strcat(resposta, "-----------------------\n");
+            write(client_socket, resposta, strlen(resposta));
         }
         else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
