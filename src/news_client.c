@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 
         Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-        sscanf(buffer, "%d;%s;%s", new_node->id, new_node->ip, new_node->Topic);
+        sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
 
         // set up the multicast address structure
         memset(&atual->addr, 0, sizeof(atual->addr));
@@ -238,36 +238,49 @@ int main(int argc, char *argv[])
                 {
                     for (Subscription *atual = subscriptions; atual != NULL; atual = atual->next)
                     {
-                        if (atual->id = id)
-                        {
-                            // create a UDP socket
-                            if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+                        if (atual->id == id)
+                        { // esta subscrito
+
+                            struct sockaddr_in addr;
+                            int addrlen, sock, cnt;
+
+                            char message[50];
+
+                            /*set up socket*/
+
+                            sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+                            if (sock < 0)
                             {
                                 perror("socket");
                                 exit(1);
                             }
+                            int multicastTTL = 255;
 
-                            struct sockaddr_in addr;
-
-                            // set up the multicast address structure
-                            memset(&addr, 0, sizeof(addr));
-                            addr.sin_family = AF_INET;
-                            addr.sin_addr.s_addr = inet_addr(new_node->ip);
-                            addr.sin_port = htons(5000);
-
-                            // enable multicast on the socket
-                            int enable = 255;
-                            if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
+                            if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&multicastTTL, sizeof(multicastTTL)))
                             {
-                                perror("setsockopt");
+                                perror("socketopt");
                                 exit(1);
                             }
-                            // send the multicast message
-                            if (sendto(new_node->fd, msg, msglen, 0, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+
+                            bzero((char *)&addr, sizeof(addr));
+                            addr.sin_family = AF_INET;
+                            addr.sin_addr.s_addr = htons(INADDR_ANY);
+                            addr.sin_port = htons(MCPORT);
+                            /////////send message//////
+
+                            addr.sin_addr.s_addr = inet_addr(atual->ip);
+
+                            sprintf(message, "%s\n", buffer);
+
+                            cnt = sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, addrlen);
+
+                            if (cnt < 0)
                             {
                                 perror("sendto");
                                 exit(1);
                             }
+
                             break;
                         }
                     }
