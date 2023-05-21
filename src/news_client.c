@@ -165,16 +165,16 @@ int main(int argc, char *argv[])
         if (strcmp(buffer, "leitor"))
         {
             type = 1;
+            printf("Sessão iniciada com sucesso!\n");
             break;
         }
         if (strcmp(buffer, "jornalista"))
         {
             type = 2;
+            printf("Sessão iniciada com sucesso!\n");
             break;
         }
     }
-
-    printf("Sessão iniciada com sucesso!\n");
 
     // receber topicos nos quais esta inscrito
 
