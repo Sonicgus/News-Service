@@ -197,6 +197,9 @@ void *handle_tcp(void *p_client_socket)
 
     for (Subscription *atual = user->subscriptions; atual != NULL; atual = atual->next)
     {
+        printf("%d;%s;%s\n", atual->topic_node->id, atual->topic_node->ip, atual->topic_node->Topic);
+        fflush(stdout);
+
         sprintf(resposta, "%d;%s;%s\n", atual->topic_node->id, atual->topic_node->ip, atual->topic_node->Topic);
 
         write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
