@@ -12,10 +12,12 @@
 
 // tamanho do buffer
 #define BUF_SIZE 1024
+#define MCPORT 6000
 
 typedef struct subscription
 {
     int id;
+    char ip[40];
     char Topic[21];
     struct sockaddr_in addr;
     pthread_t thread_id;
@@ -33,56 +35,76 @@ void erro(char *msg);
 void *multicast(void *topic_sub)
 {
     Subscription *sub = ((Subscription *)(topic_sub));
+    ///////////////////////////////////////////
+    struct sockaddr_in addr;
+    int addrlen, sock, cnt;
 
-    int sock;
+    char message[50];
 
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+    /*set up socket*/
+
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if (sock < 0)
     {
         perror("socket");
         exit(1);
     }
+    int multicastTTL = 255;
 
-    // bind the socket to the port
+    if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&multicastTTL, sizeof(multicastTTL)))
+    {
+        perror("socketopt");
+        exit(1);
+    }
+
+    bzero((char *)&addr, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htons(INADDR_ANY);
+    addr.sin_port = htons(MCPORT);
+
+    ////////////////////recive///////////////////////
+    struct ip_mreq mreq;
+
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         perror("bind");
         exit(1);
     }
-    // join the multicast group
-    struct ip_mreq mreq;
+
     mreq.imr_multiaddr.s_addr = inet_addr(sub->ip);
-    mreq.imr_interface.s_addr = INADDR_ANY;
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 
     if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
     {
-        perror("setsockopt");
-        exit(1);
+        perror("setsockopt mreq");
     }
-
-    char msg[BUF_SIZE];
-
-    int addrlen = sizeof(addr);
 
     while (!turnoff)
     {
         // receive the multicast message
         int nbytes;
-        if ((nbytes = recvfrom(sock, msg, sizeof(msg), 0, (struct sockaddr *)&addr, &addrlen)) < 0)
+        if ((nbytes = recvfrom(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, &addrlen)) < 0)
         {
             perror("recvfrom");
             exit(1);
         }
 
-        printf("Received multicast message: %s\n", msg);
+        if (nbytes < 0)
+        {
+            perror("recvfrom");
+            exit(1);
+        }
+        if (nbytes == 0)
+        {
+            break;
+        }
+
+        printf("Received multicast message: %s\n", message);
     }
 
-    // leave the multicast group
-    if (setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
-    {
-        perror("setsockopt");
-        exit(1);
-    }
-    // close the socket
+    ///////////////////////////////////////////
+
     close(sock);
 }
 
@@ -234,7 +256,7 @@ int main(int argc, char *argv[])
                             addr.sin_port = htons(5000);
 
                             // enable multicast on the socket
-                            int enable = 1;
+                            int enable = 255;
                             if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
                             {
                                 perror("setsockopt");
