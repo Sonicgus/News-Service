@@ -254,26 +254,62 @@ void *handle_tcp(void *p_client_socket)
 
             if (p_topic == NULL)
             {
-                write(client_socket, "Topico com esse id não existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
+                write(client_socket, "Topico com esse id não existe\n", strlen("Topico com esse id não existe\n")); // enviar a resposta ao cliente
             }
             else
             {
-                // verificar se já esta inscrito no topico
                 Subscription *atual;
+
+                // verificar se já esta inscrito no topico
                 for (atual = user->subscriptions; atual != NULL; atual = atual->next)
                 {
                     if (atual->topic_node->id == id)
                     {
-                        printf("ja estava subscrito\n");
                         break;
                     }
                 }
-
-                if (atual == NULL)
+                if (atual != NULL)
                 {
-                    sprintf(resposta, "%d;%s;%s", p_topic->id, p_topic->ip, p_topic->Topic);
+                    printf("ja estava inscrito\n");
+                }
+                else
+                {
+                    if (user->subscriptions == NULL)
+                    {
+                        Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
-                    write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+                        new_node->topic_node = p_topic;
+
+                        sprintf(resposta, "%d;%s;%s", p_topic->id, p_topic->ip, p_topic->Topic);
+
+                        write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+
+                        user->subscriptions = new_node;
+
+                        printf("subscriçao criada\n");
+                    }
+                    else
+                    {
+                        Subscription *atual;
+                        for (atual = user->subscriptions; atual != NULL; atual = atual->next)
+                        {
+                            if (atual->next == NULL)
+                            {
+                                Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
+
+                                new_node->topic_node = p_topic;
+
+                                sprintf(resposta, "%d;%s;%s", p_topic->id, p_topic->ip, p_topic->Topic);
+
+                                write(client_socket, resposta, strlen(resposta)); // enviar a resposta ao cliente
+
+                                printf("subscriçao criada\n");
+
+                                atual->next = new_node;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
