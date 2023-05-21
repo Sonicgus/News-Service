@@ -252,9 +252,31 @@ int main(int argc, char *argv[])
                 /* code */
             }
             else
-            {
+            { // procurar local
+
                 Subscription *atual = subscriptions;
-                //sscanf(buffer, "%d;%s;%s", atual->topic_node->id, atual->topic_node->ip, atual->topic_node->Topic);
+
+                Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
+
+                sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
+
+                if (subscriptions == NULL)
+                {
+                    subscriptions = new_node;
+                }
+                else
+                {
+                    for (; atual != NULL; atual = atual->next)
+                    {
+                        if (atual->next == NULL)
+                        {
+                            atual->next = new_node;
+                        }
+                    }
+                }
+
+                if (pthread_create(&atual->thread_id, NULL, multicast, atual))
+                    erro("Error: Creating udp thread");
             }
 
             // se nao deu erro, entao adiciona na lista de topicos subscriptos e começa a receber mensagens do grupo multicast
