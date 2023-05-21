@@ -123,6 +123,10 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+    strcpy(endServer, argv[1]);
+    if ((hostPtr = gethostbyname(endServer)) == 0)
+        erro("Não consegui obter endereço");
+
     bzero((void *)&addr, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = ((struct in_addr *)(hostPtr->h_addr))->s_addr;
@@ -132,6 +136,10 @@ int main(int argc, char *argv[])
         erro("socket");
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
         erro("Connect");
+
+    bzero(buffer, BUF_SIZE);
+    read(fd, buffer, BUF_SIZE - 1);
+    printf("%s", buffer);
 
     while (!turnoff)
     {
