@@ -370,7 +370,11 @@ void *handle_tcp(void *p_client_socket)
 
                 for (atual = topics; atual != NULL; atual = atual->next)
                 {
-                    if (atual->next == NULL)
+                    if (atual->id == id)
+                    {
+                        write(client_socket, "Topico com esse id já existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
+                    }
+                    else if (atual->next == NULL)
                     {
                         TopicNode *new_node = (TopicNode *)malloc(sizeof(TopicNode));
 
@@ -409,11 +413,6 @@ void *handle_tcp(void *p_client_socket)
 
                         printf("topico criado\n");
                     }
-                }
-
-                if (atual != NULL)
-                {
-                    write(client_socket, "Topico com esse id já existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
                 }
             }
         }
