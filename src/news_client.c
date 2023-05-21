@@ -140,6 +140,7 @@ int main(int argc, char *argv[])
     bzero(buffer, BUF_SIZE);
     read(fd, buffer, BUF_SIZE - 1);
     printf("%s", buffer);
+    fflush(stdout);
 
     while (!turnoff)
     {
@@ -165,23 +166,33 @@ int main(int argc, char *argv[])
         {
             type = 1;
             printf("Sessão iniciada com sucesso!\n");
+            fflush(stdout);
             break;
         }
         if (strcmp(buffer, "jornalista") == 0)
         {
             type = 2;
             printf("Sessão iniciada com sucesso!\n");
+            fflush(stdout);
             break;
         }
 
         printf("%s", buffer);
+        fflush(stdout);
     }
 
     // receber topicos nos quais esta inscrito
 
     bzero(buffer, BUF_SIZE);
+
+    printf("Antes da leitura\n");
     read(fd, buffer, BUF_SIZE - 1);
-    // printf("%s", buffer);
+    printf("Depois da leitura\n");
+    
+    fflush(stdout);
+    printf("boas\n");
+    printf("%s\n", buffer);
+    fflush(stdout);
 
     if (strcmp(buffer, "FIM") != 0)
     {
@@ -252,7 +263,7 @@ int main(int argc, char *argv[])
 
         if (strcmp(token, "LIST_TOPICS") == 0)
         {
-            write(fd, "LIST_TOPICS\n", strlen("LIST_TOPICS"\n));
+            write(fd, "LIST_TOPICS\n", strlen("LIST_TOPICS\n"));
         }
         else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {

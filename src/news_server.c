@@ -133,12 +133,9 @@ void *handle_tcp(void *p_client_socket)
 
     char buffer[BUFLEN];
     char resposta[BUFLEN]; // variavel na qual é inserida a mensagem a enviar ao cliente
-    char ip[50];           // ip conrrespondente ao dominio
 
     char *cmd_args[5]; // pointer that stores command arguments
     char *token;
-
-    char username[50], password[50];
 
     UserNode *user = NULL;
 
@@ -156,6 +153,7 @@ void *handle_tcp(void *p_client_socket)
         buffer[recv_len - 1] = '\0';
 
         printf("Mensagem recebida:%s\n", buffer);
+        fflush(stdout);
 
         // get each command parameter piece
         for (token = strtok(buffer, " "); token != NULL && num_args < 2; token = strtok(NULL, " "))
@@ -186,6 +184,7 @@ void *handle_tcp(void *p_client_socket)
             else
             {
                 write(client_socket, user->type, sizeof(user->type));
+                printf("enviei o tipo\n");
                 break;
             }
         }
@@ -613,7 +612,7 @@ int del(const char *username)
 
 int add_user(const char *username, const char *password, const char *type)
 {
-    for (UserNode *last = NULL, *atual = root; atual != NULL; last = atual, atual = atual->next)
+    for (UserNode *atual = root; atual != NULL; atual = atual->next)
     {
         if (strcmp(atual->username, username) == 0)
         { // ja existe um user com esse username
