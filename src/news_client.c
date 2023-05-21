@@ -143,10 +143,10 @@ int main(int argc, char *argv[])
 
     while (!turnoff)
     {
-        scanf("%s", buffer);               // pedir ao usuário a mensagem a enviar
-        write(fd, buffer, strlen(buffer)); // enviar a mensagem
+        fgets(buffer, sizeof(buffer), stdin); // pedir ao usuário a mensagem a enviar
+        write(fd, buffer, strlen(buffer));    // enviar a mensagem
 
-        if (strcmp(buffer, "EXIT\n"))
+        if (strcmp(buffer, "EXIT\n") == 0)
         {
             write(fd, "EXIT", strlen("EXIT"));
             turnoff = 1;
@@ -156,18 +156,18 @@ int main(int argc, char *argv[])
         bzero(buffer, BUF_SIZE);
         read(fd, buffer, BUF_SIZE - 1);
 
-        if (strcmp(buffer, "EXIT"))
+        if (strcmp(buffer, "EXIT") == 0)
         {
             turnoff = 1;
             break;
         }
-        if (strcmp(buffer, "leitor"))
+        if (strcmp(buffer, "leitor") == 0)
         {
             type = 1;
             printf("Sessão iniciada com sucesso!\n");
             break;
         }
-        if (strcmp(buffer, "jornalista"))
+        if (strcmp(buffer, "jornalista") == 0)
         {
             type = 2;
             printf("Sessão iniciada com sucesso!\n");
@@ -231,11 +231,16 @@ int main(int argc, char *argv[])
         printf("CREATE_TOPIC <id do tópico> <título do tópico>\nSEND_NEWS <id do tópico> <noticia>\n");
     }
 
+    char copia[BUF_SIZE];
+
     while (!turnoff)
     {
-        bzero(buffer, BUF_SIZE);        // limpar o buffer preenchendo com zeros
-        read(fd, buffer, BUF_SIZE - 1); // guardar a informação recebida no buffer
-        printf("%s", buffer);           // imprimir a menssagem recebida
+        bzero(buffer, BUF_SIZE);
+        bzero(copia, BUF_SIZE);
+
+        fgets(buffer, sizeof(buffer), stdin); // pedir ao usuário a mensagem a enviar
+        strcpy(copia, buffer);
+
         char *token = strtok(buffer, " ");
 
         if (strcmp(token, "EXIT\n"))
@@ -247,11 +252,11 @@ int main(int argc, char *argv[])
 
         if (strcmp(token, "LIST_TOPICS") == 0)
         {
-            write(fd, buffer, strlen(buffer));
+            write(fd, "LIST_TOPICS\n", strlen("LIST_TOPICS"\n));
         }
         else if (strcmp(token, "SUBSCRIBE_TOPIC") == 0)
         {
-            write(fd, buffer, strlen(buffer));
+            write(fd, copia, strlen(copia));
 
             bzero(buffer, BUF_SIZE);
             read(fd, buffer, BUF_SIZE - 1);
@@ -360,7 +365,7 @@ int main(int argc, char *argv[])
         }
         else if (type == 2 && strcmp(token, "CREATE_TOPIC") == 0)
         {
-            write(fd, buffer, strlen(buffer));
+            write(fd, copia, strlen(copia));
         }
         else
         {
