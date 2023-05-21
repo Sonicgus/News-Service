@@ -218,6 +218,28 @@ int main(int argc, char *argv[])
                     {
                         if (atual->id = id)
                         {
+                            // create a UDP socket
+                            if ((new_node->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+                            {
+                                perror("socket");
+                                exit(1);
+                            }
+
+                            struct sockaddr_in addr;
+
+                            // set up the multicast address structure
+                            memset(&addr, 0, sizeof(addr));
+                            addr.sin_family = AF_INET;
+                            addr.sin_addr.s_addr = inet_addr(new_node->ip);
+                            addr.sin_port = htons(5000);
+
+                            // enable multicast on the socket
+                            int enable = 1;
+                            if (setsockopt(new_node->fd, IPPROTO_IP, IP_MULTICAST_TTL, &enable, sizeof(enable)) < 0)
+                            {
+                                perror("setsockopt");
+                                exit(1);
+                            }
                             // send the multicast message
                             if (sendto(new_node->fd, msg, msglen, 0, (struct sockaddr *)&addr, sizeof(addr)) < 0)
                             {
