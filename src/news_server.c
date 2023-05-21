@@ -323,8 +323,6 @@ void *handle_tcp(void *p_client_socket)
 
             int id = atoi(token);
 
-            printf("nice: %d\n", id);
-
             if (topics == NULL)
             {
 
@@ -372,7 +370,7 @@ void *handle_tcp(void *p_client_socket)
                 {
                     if (atual->id == id)
                     {
-                        write(client_socket, "Topico com esse id já existe", strlen("Topico com esse id não existe")); // enviar a resposta ao cliente
+                        write(client_socket, "Topico com esse id já existe\n", strlen("Topico com esse id já existe\n")); // enviar a resposta ao cliente
                     }
                     else if (atual->next == NULL)
                     {
