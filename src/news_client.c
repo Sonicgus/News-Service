@@ -155,7 +155,6 @@ int main(int argc, char *argv[])
 
         bzero(buffer, BUF_SIZE);
         read(fd, buffer, BUF_SIZE - 1);
-        printf("%s", buffer);
 
         if (strcmp(buffer, "EXIT"))
         {
@@ -174,6 +173,8 @@ int main(int argc, char *argv[])
             printf("Sessão iniciada com sucesso!\n");
             break;
         }
+
+        printf("%s", buffer);
     }
 
     // receber topicos nos quais esta inscrito
