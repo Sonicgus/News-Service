@@ -38,7 +38,7 @@ void *multicast(void *topic_sub)
     Subscription *sub = ((Subscription *)(topic_sub));
     ///////////////////////////////////////////
     struct sockaddr_in addr;
-    int addrlen, sock, cnt;
+    int addrlen, sock;
 
     char message[50];
 
@@ -185,14 +185,7 @@ int main(int argc, char *argv[])
 
     bzero(buffer, BUF_SIZE);
 
-    printf("Antes da leitura\n");
     read(fd, buffer, BUF_SIZE - 1);
-    printf("Depois da leitura\n");
-    
-    fflush(stdout);
-    printf("boas\n");
-    printf("%s\n", buffer);
-    fflush(stdout);
 
     if (strcmp(buffer, "FIM") != 0)
     {
@@ -250,16 +243,17 @@ int main(int argc, char *argv[])
         bzero(copia, BUF_SIZE);
 
         fgets(buffer, sizeof(buffer), stdin); // pedir ao usuário a mensagem a enviar
-        strcpy(copia, buffer);
 
-        char *token = strtok(buffer, " ");
-
-        if (strcmp(token, "EXIT\n"))
+        if (strcmp(buffer, "EXIT\n"))
         {
             write(fd, "EXIT", strlen("EXIT")); // enviar a mensagem
             turnoff = 1;
             break;
         }
+
+        strcpy(copia, buffer);
+
+        char *token = strtok(buffer, " ");
 
         if (strcmp(token, "LIST_TOPICS") == 0)
         {
@@ -323,7 +317,7 @@ int main(int argc, char *argv[])
                         { // esta subscrito
 
                             struct sockaddr_in addr;
-                            int addrlen, sock, cnt;
+                            int sock, cnt;
 
                             char message[50];
 
@@ -354,7 +348,7 @@ int main(int argc, char *argv[])
 
                             sprintf(message, "%s\n", token);
 
-                            cnt = sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, addrlen);
+                            cnt = sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&addr, sizeof(addr));
 
                             if (cnt < 0)
                             {
