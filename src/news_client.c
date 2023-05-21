@@ -21,7 +21,6 @@ typedef struct subscription
     int id;
     char ip[40];
     char Topic[21];
-    struct sockaddr_in addr;
     pthread_t thread_id;
     struct subscription *next;
 } Subscription;
@@ -43,7 +42,7 @@ void *multicast(void *topic_sub)
 
     char message[50];
 
-    /*set up socket*/
+    /* set up socket */
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -186,12 +185,6 @@ int main(int argc, char *argv[])
         Subscription *new_node = (Subscription *)malloc(sizeof(Subscription));
 
         sscanf(buffer, "%d;%s;%s", &new_node->id, new_node->ip, new_node->Topic);
-
-        // set up the multicast address structure
-        memset(&atual->addr, 0, sizeof(atual->addr));
-        atual->addr.sin_family = AF_INET;
-        atual->addr.sin_addr.s_addr = INADDR_ANY;
-        atual->addr.sin_port = htons(5000);
 
         if (pthread_create(&atual->thread_id, NULL, multicast, atual))
             erro("Error: Creating udp thread");
